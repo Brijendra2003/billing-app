@@ -4,9 +4,17 @@ const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
     agentFeedback: true,
+    serverActions: {
+      // Settings page uploads logo, signature and payment QR (up to 2 MB each)
+      bodySizeLimit: "8mb",
+    },
   },
   cacheComponents: true,
   partialPrefetching: true,
+  // PDF fonts are read from disk at runtime, so make sure they ship with server functions.
+  outputFileTracingIncludes: {
+    "/**": ["./lib/pdf/fonts/**/*"],
+  },
   turbopack: {
     rules: {
       "*.css": {
