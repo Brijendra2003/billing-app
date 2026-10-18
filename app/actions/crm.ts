@@ -1,5 +1,6 @@
 "use server";
 
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { assertCanWrite, getContext } from "@/lib/auth";
@@ -113,6 +114,7 @@ export async function addFollowup(formData: FormData) {
     note: input.note,
     created_by: ctx.userId,
   });
+  refresh();
 }
 
 export async function toggleFollowup(id: string, done: boolean) {

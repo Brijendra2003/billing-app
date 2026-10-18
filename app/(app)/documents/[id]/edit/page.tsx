@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getContext } from "@/lib/auth";
-import { getDocumentWithItems } from "@/lib/data/documents";
+import { getDocumentWithItems, isEditable } from "@/lib/data/documents";
 import { editorStateFromDocument, loadEditorOptions } from "@/lib/data/editor";
 import { DocumentEditor } from "@/components/document-editor/editor";
 import { PageHeader } from "@/components/ui";
@@ -12,10 +12,7 @@ export default async function EditDocumentPage({ params }: PageProps<"/documents
   const loaded = await getDocumentWithItems(ctx.supabase, id);
   if (!loaded) notFound();
   const { doc, items } = loaded;
-  const editable =
-    doc.status === "draft" ||
-    ((doc.doc_type === "quotation" || doc.doc_type === "proforma") && ["issued", "sent", "accepted", "rejected"].includes(doc.status));
-  if (!editable) redirect(`/documents/${id}`);
+  if (ctx.role === "viewer" || !isEditable(doc)) redirect(`/documents/${id}`);
 
   const options = await loadEditorOptions(ctx);
   return (

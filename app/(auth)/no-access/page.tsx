@@ -1,4 +1,5 @@
 import { logout } from "@/app/actions/auth";
+import { SubmitButton } from "@/components/submit-button";
 
 export default function NoAccessPage() {
   return (
@@ -8,7 +9,7 @@ export default function NoAccessPage() {
         Your account isn&apos;t linked to this business. Ask the admin to add you.
       </p>
       <form action={logout}>
-        <button className="btn-secondary w-full">Sign out</button>
+        <SubmitButton className="btn-secondary w-full">Sign out</SubmitButton>
       </form>
     </div>
   );

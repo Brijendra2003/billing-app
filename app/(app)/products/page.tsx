@@ -1,4 +1,7 @@
+import Link from "next/link";
+import Form from "next/form";
 import type { Metadata } from "next";
+import { SubmitButton } from "@/components/submit-button";
 import { getContext } from "@/lib/auth";
 import { PageHeader } from "@/components/ui";
 import { ProductForm } from "@/components/product-form";
@@ -18,18 +21,21 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
   const products = (data ?? []).map((p) => ({ ...p, default_rate: Number(p.default_rate), tax_rate: Number(p.tax_rate) })) as Product[];
   const editing = edit ? products.find((p) => p.id === edit) : undefined;
   const taxRate = Number(ctx.business.default_tax_rate);
+  const canWrite = ctx.role !== "viewer";
 
   return (
     <>
       <PageHeader title="Products & services" subtitle="New items typed on an invoice are added here automatically." />
-      <div className="card card-pad mb-5">
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">{editing ? `Edit ${editing.name}` : "Add product"}</h2>
-        <ProductForm key={editing?.id ?? "new"} product={editing} defaultTaxRate={taxRate} />
-      </div>
-      <form action="/products" className="mb-3 flex gap-2">
+      {canWrite && (
+        <div className="card card-pad mb-5">
+          <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">{editing ? `Edit ${editing.name}` : "Add product"}</h2>
+          <ProductForm key={editing?.id ?? "new"} product={editing} defaultTaxRate={taxRate} />
+        </div>
+      )}
+      <Form action="/products" className="mb-3 flex gap-2">
         <input name="q" defaultValue={q} placeholder="Search name or HSN…" className="input h-9 sm:w-64" />
-        <button className="btn-secondary btn-sm">Search</button>
-      </form>
+        <SubmitButton className="btn-secondary btn-sm">Search</SubmitButton>
+      </Form>
       <div className="card overflow-x-auto">
         <table className="table-base">
           <thead>
@@ -55,10 +61,14 @@ export default async function ProductsPage({ searchParams }: PageProps<"/product
                 </td>
                 <td className="text-right">{p.tax_rate}%</td>
                 <td className="whitespace-nowrap text-right">
-                  <a href={`/products?edit=${p.id}`} className="btn-ghost btn-sm">
-                    Edit
-                  </a>
-                  <ArchiveProductButton id={p.id} />
+                  {canWrite && (
+                    <>
+                      <Link href={`/products?edit=${p.id}`} className="btn-ghost btn-sm" scroll>
+                        Edit
+                      </Link>
+                      <ArchiveProductButton id={p.id} />
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

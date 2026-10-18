@@ -2,10 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AlertTriangle, Mail, MessageCircle } from "lucide-react";
 import { getContext } from "@/lib/auth";
-import { displayStatus, fileName, getDocumentWithItems, normalizeDoc } from "@/lib/data/documents";
+import { displayStatus, fileName, getDocumentWithItems, isEditable, normalizeDoc } from "@/lib/data/documents";
 import { messageDefaults } from "@/lib/data/messages";
 import { gasConfigured } from "@/lib/messaging/gas";
-import { PageHeader, StatusBadge } from "@/components/ui";
+import { PageHeader, Spinner, StatusBadge } from "@/components/ui";
 import { DocumentActions } from "@/components/document-actions";
 import { DeletePaymentButton } from "@/components/small-actions";
 import { date, dateTime, money, number, todayIST } from "@/lib/format";
@@ -33,9 +33,8 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
 
   const status = displayStatus(doc, today);
   const label = DOC_LABEL[doc.doc_type];
-  const editable =
-    doc.status === "draft" ||
-    ((doc.doc_type === "quotation" || doc.doc_type === "proforma") && ["issued", "sent", "accepted", "rejected"].includes(doc.status));
+  const canWrite = ctx.role !== "viewer";
+  const editable = canWrite && isEditable(doc);
   const listHref = doc.doc_type === "quotation" ? "/quotations" : "/invoices";
   const { data: client } = doc.client_id
     ? await ctx.supabase.from("clients").select("email, phone, whatsapp").eq("id", doc.client_id).maybeSingle()
@@ -78,6 +77,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
           number={doc.number}
           balanceDue={doc.balance_due}
           editable={editable}
+          canWrite={canWrite}
           clientEmail={doc.bill_to.email || client?.email || ""}
           clientPhone={client?.whatsapp || doc.bill_to.phone || client?.phone || ""}
           fileName={fileName(doc)}
@@ -132,8 +132,13 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
             </table>
           </div>
 
-          <div className="card hidden overflow-hidden md:block">
-            <iframe src={`/api/documents/${doc.id}/pdf#view=FitH`} title="PDF preview" className="h-[75vh] w-full" />
+          <div className="card relative hidden overflow-hidden md:block">
+            {/* Spinner sits behind the iframe and is covered once the PDF has rendered */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-brand-600">
+              <Spinner className="size-8 border-[3px]" />
+              <span className="text-sm text-slate-500">Preparing PDF…</span>
+            </div>
+            <iframe src={`/api/documents/${doc.id}/pdf#view=FitH`} title="PDF preview" className="relative h-[75vh] w-full" />
           </div>
         </div>
 

@@ -1,8 +1,11 @@
 import Link from "next/link";
+import Form from "next/form";
+import { FileDown, Pencil } from "lucide-react";
 import type { AppContext } from "@/lib/auth";
-import { displayStatus, normalizeDoc } from "@/lib/data/documents";
+import { displayStatus, isEditable, normalizeDoc } from "@/lib/data/documents";
 import { date, money, todayIST } from "@/lib/format";
 import { EmptyState, StatusBadge } from "@/components/ui";
+import { SubmitButton } from "@/components/submit-button";
 import { DOC_LABEL, type DocType } from "@/lib/types";
 
 export interface ListFilters {
@@ -50,11 +53,16 @@ export async function DocumentList({
     case "open":
       query = query.in("status", ["issued", "sent"]);
       break;
+    // Credit notes carry a balance but are never "paid", so keep them out of the receivable tabs.
     case "unpaid":
-      query = query.in("status", ["issued", "sent", "partially_paid"]).gt("balance_due", 0);
+      query = query.in("status", ["issued", "sent", "partially_paid"]).neq("doc_type", "credit_note").gt("balance_due", 0);
       break;
     case "overdue":
-      query = query.in("status", ["issued", "sent", "partially_paid"]).gt("balance_due", 0).lt("due_date", today);
+      query = query
+        .in("status", ["issued", "sent", "partially_paid"])
+        .eq("doc_type", "tax_invoice")
+        .gt("balance_due", 0)
+        .lt("due_date", today);
       break;
     case "paid":
       query = query.eq("status", "paid");
@@ -77,6 +85,7 @@ export async function DocumentList({
 
   const { data, count } = await query;
   const docs = (data ?? []).map(normalizeDoc);
+  const canWrite = ctx.role !== "viewer";
 
   const href = (patch: Partial<ListFilters>) => {
     const p = new URLSearchParams();
@@ -105,12 +114,12 @@ export async function DocumentList({
             );
           })}
         </div>
-        <form className="flex gap-2" action={basePath}>
+        <Form className="flex gap-2" action={basePath}>
           {filters.status && <input type="hidden" name="status" value={filters.status} />}
           {filters.type && <input type="hidden" name="type" value={filters.type} />}
           <input name="q" defaultValue={q} placeholder="Number or client…" className="input h-9 w-full sm:w-56" />
-          <button className="btn-secondary btn-sm">Search</button>
-        </form>
+          <SubmitButton className="btn-secondary btn-sm">Search</SubmitButton>
+        </Form>
       </div>
 
       {docs.length === 0 ? (
@@ -127,6 +136,9 @@ export async function DocumentList({
                 <th className="text-right">Amount</th>
                 <th className="hidden text-right md:table-cell">Balance</th>
                 <th>Status</th>
+                <th className="w-24 text-right">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -143,10 +155,29 @@ export async function DocumentList({
                   <td className="hidden whitespace-nowrap md:table-cell">{date(d.doc_type === "quotation" ? d.valid_until : d.due_date)}</td>
                   <td className="whitespace-nowrap text-right font-medium tabular-nums">{money(d.grand_total)}</td>
                   <td className="hidden whitespace-nowrap text-right tabular-nums md:table-cell">
-                    {d.doc_type === "quotation" || d.status === "draft" ? "—" : money(d.balance_due)}
+                    {d.doc_type === "quotation" || d.doc_type === "credit_note" || d.status === "draft" ? "—" : money(d.balance_due)}
                   </td>
                   <td>
                     <StatusBadge status={displayStatus(d, today)} />
+                  </td>
+                  <td className="whitespace-nowrap text-right">
+                    <div className="inline-flex gap-0.5">
+                      {canWrite && isEditable(d) && (
+                        <Link href={`/documents/${d.id}/edit`} className="btn-ghost btn-sm px-2" title="Edit" aria-label={`Edit ${d.number ?? "draft"}`}>
+                          <Pencil className="size-4" />
+                        </Link>
+                      )}
+                      <a
+                        href={`/api/documents/${d.id}/pdf`}
+                        target="_blank"
+                        rel="noopener"
+                        className="btn-ghost btn-sm px-2"
+                        title="Open PDF"
+                        aria-label={`Open PDF of ${d.number ?? "draft"}`}
+                      >
+                        <FileDown className="size-4" />
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}

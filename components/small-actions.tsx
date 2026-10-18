@@ -2,7 +2,8 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { Spinner } from "@/components/ui";
 import { deletePayment, toggleFollowup, archiveProduct } from "@/app/actions/crm";
 
 export function DeletePaymentButton({ id }: { id: string }) {
@@ -21,7 +22,7 @@ export function DeletePaymentButton({ id }: { id: string }) {
         });
       }}
     >
-      {pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+      {pending ? <Spinner /> : <Trash2 className="size-4" />}
     </button>
   );
 }
@@ -29,12 +30,12 @@ export function DeletePaymentButton({ id }: { id: string }) {
 export function FollowupCheckbox({ id, done }: { id: string; done: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  if (pending) return <Spinner className="mt-0.5 size-4 text-brand-600" />;
   return (
     <input
       type="checkbox"
       className="mt-0.5 size-4 accent-brand-600"
       checked={done}
-      disabled={pending}
       aria-label="Mark follow-up done"
       onChange={(e) =>
         start(async () => {
@@ -61,7 +62,7 @@ export function ArchiveProductButton({ id }: { id: string }) {
         });
       }}
     >
-      Remove
+      {pending && <Spinner className="size-3.5" />} Remove
     </button>
   );
 }

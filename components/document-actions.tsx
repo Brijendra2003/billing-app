@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Ban,
@@ -12,7 +12,7 @@ import {
   FileCheck2,
   FileMinus,
   Link2,
-  Loader2,
+  FileText,
   Mail,
   MessageCircle,
   Pencil,
@@ -25,6 +25,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Modal } from "@/components/modal";
+import { Spinner } from "@/components/ui";
 import {
   cancelDocument,
   copyDocument,
@@ -47,6 +48,7 @@ export interface DocActionProps {
   number: string | null;
   balanceDue: number;
   editable: boolean;
+  canWrite: boolean;
   clientEmail: string;
   clientPhone: string;
   fileName: string;
@@ -56,18 +58,27 @@ export interface DocActionProps {
   messages: { link: string; emailSubject: string; emailBody: string; whatsapp: string; reminder: string };
 }
 
+type Busy = "issue" | "accept" | "reject" | "invoice" | "proforma" | "credit" | "duplicate" | "reset" | "delete" | "download";
+
 export function DocumentActions(p: DocActionProps) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [busy, setBusy] = useState<Busy | null>(null);
   const [modal, setModal] = useState<null | "email" | "whatsapp" | "payment" | "cancel">(null);
   const [flash, setFlash] = useState<string | null>(null);
   const isDraft = p.status === "draft";
   const isQuote = p.docType === "quotation";
   const isInvoice = p.docType === "tax_invoice";
-  const canPay = (isInvoice || p.docType === "proforma") && !isDraft && p.status !== "cancelled" && p.status !== "converted" && p.balanceDue > 0;
+  const canPay =
+    p.canWrite && (isInvoice || p.docType === "proforma") && !isDraft && p.status !== "cancelled" && p.status !== "converted" && p.balanceDue > 0;
   const pdfUrl = `/api/documents/${p.id}/pdf`;
+  const locked = (isInvoice || p.docType === "credit_note") && !isDraft && p.status !== "cancelled";
 
-  const run = (fn: () => Promise<{ ok: boolean; error?: string } | void>, ok?: string) =>
+  /** Runs a server action, marking which button is busy so only that one shows a spinner. */
+  const run = (key: Busy, fn: () => Promise<{ ok: boolean; error?: string } | void>, ok?: string) => {
+    setBusy(key);
+    // `busy` is only read while the transition is pending, so it never needs resetting
+    // (actions that redirect keep the spinner going until the next page arrives).
     start(async () => {
       const res = await fn();
       if (res && !res.ok) setFlash(res.error ?? "Something went wrong");
@@ -76,6 +87,27 @@ export function DocumentActions(p: DocActionProps) {
         router.refresh();
       }
     });
+  };
+  const icon = (key: Busy, Icon: typeof Ban, size = "size-3.5") =>
+    pending && busy === key ? <Spinner className={size} /> : <Icon className={size} />;
+
+  const download = async () => {
+    setBusy("download");
+    try {
+      const res = await fetch(`${pdfUrl}?download=1`);
+      if (!res.ok) throw new Error("Could not generate the PDF");
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = p.fileName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch (e) {
+      setFlash(e instanceof Error ? e.message : "Could not download the PDF");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <>
@@ -89,111 +121,129 @@ export function DocumentActions(p: DocActionProps) {
       )}
 
       <div className="flex flex-wrap gap-2">
-        {isDraft ? (
-          <button className="btn-primary" disabled={pending} onClick={() => run(() => issueDocument(p.id), "Issued.")}>
-            {pending ? <Loader2 className="size-4 animate-spin" /> : <FileCheck2 className="size-4" />} Issue
-          </button>
-        ) : (
-          <>
-            <button className="btn-whatsapp" onClick={() => setModal("whatsapp")}>
-              <MessageCircle className="size-4" /> WhatsApp
+        {p.canWrite &&
+          (isDraft ? (
+            <button className="btn-primary" disabled={pending} onClick={() => run("issue", () => issueDocument(p.id), "Issued.")}>
+              {icon("issue", FileCheck2, "size-4")} Issue
             </button>
-            <button className="btn-primary" onClick={() => setModal("email")}>
-              <Mail className="size-4" /> Email
-            </button>
-          </>
-        )}
-        <a href={pdfUrl} target="_blank" rel="noopener" className="btn-secondary">
-          <Printer className="size-4" /> Print
-        </a>
-        <a href={`${pdfUrl}?download=1`} className="btn-secondary">
-          <Download className="size-4" /> PDF
-        </a>
-        {canPay && (
-          <button className="btn-secondary" onClick={() => setModal("payment")}>
-            <Wallet className="size-4" /> Record payment
-          </button>
-        )}
+          ) : (
+            <>
+              <button className="btn-whatsapp" onClick={() => setModal("whatsapp")}>
+                <MessageCircle className="size-4" /> WhatsApp
+              </button>
+              <button className="btn-primary" onClick={() => setModal("email")}>
+                <Mail className="size-4" /> Email
+              </button>
+            </>
+          ))}
         {p.editable && (
           <Link href={`/documents/${p.id}/edit`} className="btn-secondary">
             <Pencil className="size-4" /> Edit
           </Link>
         )}
+        <a href={pdfUrl} target="_blank" rel="noopener" className="btn-secondary">
+          <Printer className="size-4" /> Print
+        </a>
+        <button className="btn-secondary" disabled={busy === "download"} onClick={download}>
+          {busy === "download" ? <Spinner /> : <Download className="size-4" />} PDF
+        </button>
+        {canPay && (
+          <button className="btn-secondary" onClick={() => setModal("payment")}>
+            <Wallet className="size-4" /> Record payment
+          </button>
+        )}
       </div>
 
-      <div className="mt-2 flex flex-wrap gap-1">
-        {isQuote && !isDraft && !["converted", "cancelled"].includes(p.status) && (
-          <>
-            {p.status !== "accepted" && (
-              <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run(() => setQuotationStatus(p.id, "accepted"))}>
-                <CheckCircle2 className="size-3.5" /> Mark accepted
+      {p.canWrite && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {isQuote && !isDraft && !["converted", "cancelled"].includes(p.status) && (
+            <>
+              {p.status !== "accepted" && (
+                <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run("accept", () => setQuotationStatus(p.id, "accepted"))}>
+                  {icon("accept", CheckCircle2)} Mark accepted
+                </button>
+              )}
+              {p.status !== "rejected" && (
+                <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run("reject", () => setQuotationStatus(p.id, "rejected"))}>
+                  {icon("reject", XCircle)} Mark rejected
+                </button>
+              )}
+              <button
+                className="btn-ghost btn-sm text-brand-700"
+                disabled={pending}
+                onClick={() => run("invoice", () => copyDocument(p.id, "convert", "tax_invoice"))}
+              >
+                {icon("invoice", FileCheck2)} Convert to invoice
               </button>
-            )}
-            {p.status !== "rejected" && (
-              <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run(() => setQuotationStatus(p.id, "rejected"))}>
-                <XCircle className="size-3.5" /> Mark rejected
+              <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run("proforma", () => copyDocument(p.id, "convert", "proforma"))}>
+                {icon("proforma", FileText)} Convert to proforma
               </button>
-            )}
-            <button className="btn-ghost btn-sm text-brand-700" disabled={pending} onClick={() => start(() => copyDocument(p.id, "convert", "tax_invoice"))}>
-              <FileCheck2 className="size-3.5" /> Convert to invoice
-            </button>
-            <button className="btn-ghost btn-sm" disabled={pending} onClick={() => start(() => copyDocument(p.id, "convert", "proforma"))}>
-              Convert to proforma
-            </button>
-          </>
-        )}
-        {p.docType === "proforma" && !isDraft && !["converted", "cancelled"].includes(p.status) && (
-          <button className="btn-ghost btn-sm text-brand-700" disabled={pending} onClick={() => start(() => copyDocument(p.id, "convert", "tax_invoice"))}>
-            <FileCheck2 className="size-3.5" /> Convert to tax invoice
-          </button>
-        )}
-        {isInvoice && !isDraft && p.status !== "cancelled" && (
-          <button className="btn-ghost btn-sm" disabled={pending} onClick={() => start(() => copyDocument(p.id, "credit_note"))}>
-            <FileMinus className="size-3.5" /> Credit note
-          </button>
-        )}
-        <button className="btn-ghost btn-sm" disabled={pending} onClick={() => start(() => copyDocument(p.id, "duplicate"))}>
-          <CopyPlus className="size-3.5" /> Duplicate
-        </button>
-        {!isDraft && (
-          <>
+            </>
+          )}
+          {p.docType === "proforma" && !isDraft && !["converted", "cancelled"].includes(p.status) && (
             <button
-              className="btn-ghost btn-sm"
-              onClick={async () => {
-                await navigator.clipboard.writeText(p.messages.link);
-                setFlash("Share link copied.");
-              }}
+              className="btn-ghost btn-sm text-brand-700"
+              disabled={pending}
+              onClick={() => run("invoice", () => copyDocument(p.id, "convert", "tax_invoice"))}
             >
-              <Link2 className="size-3.5" /> Copy link
+              {icon("invoice", FileCheck2)} Convert to tax invoice
             </button>
+          )}
+          {isInvoice && !isDraft && p.status !== "cancelled" && (
+            <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run("credit", () => copyDocument(p.id, "credit_note"))}>
+              {icon("credit", FileMinus)} Credit note
+            </button>
+          )}
+          <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run("duplicate", () => copyDocument(p.id, "duplicate"))}>
+            {icon("duplicate", CopyPlus)} Duplicate
+          </button>
+          {!isDraft && (
+            <>
+              <button
+                className="btn-ghost btn-sm"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(p.messages.link);
+                  setFlash("Share link copied.");
+                }}
+              >
+                <Link2 className="size-3.5" /> Copy link
+              </button>
+              <button
+                className="btn-ghost btn-sm"
+                disabled={pending}
+                onClick={() => {
+                  if (confirm("Create a new share link? The old link will stop working.")) run("reset", () => regenerateShareLink(p.id), "New share link created.");
+                }}
+              >
+                {icon("reset", RefreshCw)} Reset link
+              </button>
+            </>
+          )}
+          {!isDraft && p.status !== "cancelled" && (
+            <button className="btn-ghost btn-sm text-red-600" onClick={() => setModal("cancel")}>
+              <Ban className="size-3.5" /> Cancel
+            </button>
+          )}
+          {isDraft && (
             <button
-              className="btn-ghost btn-sm"
+              className="btn-ghost btn-sm text-red-600"
               disabled={pending}
               onClick={() => {
-                if (confirm("Create a new share link? The old link will stop working.")) run(() => regenerateShareLink(p.id), "New share link created.");
+                if (confirm("Delete this draft?")) run("delete", () => deleteDraft(p.id));
               }}
             >
-              <RefreshCw className="size-3.5" /> Reset link
+              {icon("delete", Trash2)} Delete draft
             </button>
-          </>
-        )}
-        {!isDraft && p.status !== "cancelled" && (
-          <button className="btn-ghost btn-sm text-red-600" onClick={() => setModal("cancel")}>
-            <Ban className="size-3.5" /> Cancel
-          </button>
-        )}
-        {isDraft && (
-          <button
-            className="btn-ghost btn-sm text-red-600"
-            disabled={pending}
-            onClick={() => {
-              if (confirm("Delete this draft?")) start(() => deleteDraft(p.id));
-            }}
-          >
-            <Trash2 className="size-3.5" /> Delete draft
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
+
+      {p.canWrite && locked && (
+        <p className="mt-3 text-xs text-slate-500">
+          Issued {isInvoice ? "tax invoices" : "credit notes"} can&apos;t be edited (GST rule). To correct one, cancel it and use{" "}
+          <b>Duplicate</b> to re-issue{isInvoice ? <>, or raise a <b>Credit note</b></> : null}.
+        </p>
+      )}
 
       <EmailModal {...p} open={modal === "email"} onClose={() => setModal(null)} onSent={(m) => { setFlash(m); router.refresh(); }} />
       <WhatsAppModal {...p} open={modal === "whatsapp"} onClose={() => setModal(null)} />
@@ -261,13 +311,15 @@ function EmailModal(p: DocActionProps & { open: boolean; onClose: () => void; on
             Close
           </button>
           <button className="btn-primary" disabled={pending}>
-            {pending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Send email
+            {pending ? <Spinner /> : <Send className="size-4" />} Send email
           </button>
         </div>
       </form>
     </Modal>
   );
 }
+
+const noopSubscribe = () => () => {};
 
 function WhatsAppModal(p: DocActionProps & { open: boolean; onClose: () => void }) {
   const overdueish = p.docType === "tax_invoice" && p.balanceDue > 0;
@@ -276,6 +328,14 @@ function WhatsAppModal(p: DocActionProps & { open: boolean; onClose: () => void 
   const [message, setMessage] = useState(p.messages.whatsapp);
   const [file, setFile] = useState<File | null>(null);
   const [canShareFile, setCanShareFile] = useState(false);
+  const [shareFailed, setShareFailed] = useState(false);
+  const shareApi = useSyncExternalStore(
+    noopSubscribe,
+    () => typeof navigator.canShare === "function",
+    () => false,
+  );
+  // The PDF is being fetched for the share sheet (only on devices that can share files).
+  const preparing = p.open && shareApi && !file && !shareFailed;
   const [note, setNote] = useState<string | null>(null);
 
   // Pre-fetch the PDF so the share sheet can open instantly (browsers require a fresh tap).
@@ -291,9 +351,11 @@ function WhatsAppModal(p: DocActionProps & { open: boolean; onClose: () => void 
         if (navigator.canShare({ files: [f] })) {
           setFile(f);
           setCanShareFile(true);
-        }
+        } else setShareFailed(true);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setShareFailed(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -365,7 +427,7 @@ function WhatsAppModal(p: DocActionProps & { open: boolean; onClose: () => void 
               }
             }}
           >
-            <Share2 className="size-4" /> Share PDF file
+            {preparing ? <Spinner /> : <Share2 className="size-4" />} {preparing ? "Preparing PDF…" : "Share PDF file"}
           </button>
         </div>
         <p className="text-xs text-slate-500">
@@ -435,7 +497,7 @@ function PaymentModal(p: DocActionProps & { open: boolean; onClose: () => void; 
             Close
           </button>
           <button className="btn-primary" disabled={pending}>
-            {pending && <Loader2 className="size-4 animate-spin" />} Save payment
+            {pending && <Spinner />} Save payment
           </button>
         </div>
       </form>
@@ -475,7 +537,7 @@ function CancelModal({ id, open, onClose, onDone }: { id: string; open: boolean;
             })
           }
         >
-          {pending && <Loader2 className="size-4 animate-spin" />} Cancel document
+          {pending && <Spinner />} Cancel document
         </button>
       </div>
     </Modal>

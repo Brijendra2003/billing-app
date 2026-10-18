@@ -8,6 +8,7 @@ import { addFollowup, archiveClient } from "@/app/actions/crm";
 import { PageHeader, Stat, StatusBadge } from "@/components/ui";
 import { FollowupCheckbox } from "@/components/small-actions";
 import { PrintButton } from "@/components/print-button";
+import { SubmitButton } from "@/components/submit-button";
 import { date, dateTime, money, todayIST } from "@/lib/format";
 import { formatPhone, stateName } from "@/lib/india";
 import { DOC_LABEL, type Client, type Communication, type Followup } from "@/lib/types";
@@ -20,6 +21,7 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
   if (!data) notFound();
   const client = data as Client;
   const today = todayIST();
+  const canWrite = ctx.role !== "viewer";
 
   const [{ data: docsRaw }, { data: paymentsRaw }, { data: followups }, { data: comms }] = await Promise.all([
     ctx.supabase
@@ -90,14 +92,18 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
             <Mail className="size-4" /> {client.email}
           </a>
         )}
-        <Link href={`/clients/${client.id}/edit`} className="btn-ghost btn-sm">
-          <Pencil className="size-4" /> Edit
-        </Link>
-        <form action={archiveClient.bind(null, client.id, !client.is_archived)}>
-          <button className="btn-ghost btn-sm">
-            <Archive className="size-4" /> {client.is_archived ? "Restore" : "Archive"}
-          </button>
-        </form>
+        {canWrite && (
+          <>
+            <Link href={`/clients/${client.id}/edit`} className="btn-ghost btn-sm">
+              <Pencil className="size-4" /> Edit
+            </Link>
+            <form action={archiveClient.bind(null, client.id, !client.is_archived)}>
+              <SubmitButton className="btn-ghost btn-sm" icon={<Archive className="size-4" />}>
+                {client.is_archived ? "Restore" : "Archive"}
+              </SubmitButton>
+            </form>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -235,12 +241,14 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
         <div className="grid gap-5 lg:grid-cols-2">
           <div className="card card-pad">
             <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Follow-ups</h2>
-            <form action={addFollowup} className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
-              <input type="hidden" name="client_id" value={client.id} />
-              <input name="note" required className="input" placeholder="e.g. Call about pending payment" />
-              <input name="due_on" type="date" required className="input" defaultValue={today} />
-              <button className="btn-primary">Add</button>
-            </form>
+            {canWrite && (
+              <form action={addFollowup} className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                <input type="hidden" name="client_id" value={client.id} />
+                <input name="note" required className="input" placeholder="e.g. Call about pending payment" />
+                <input name="due_on" type="date" required className="input" defaultValue={today} />
+                <SubmitButton>Add</SubmitButton>
+              </form>
+            )}
             <ul className="space-y-2">
               {((followups ?? []) as Followup[]).map((f) => (
                 <li key={f.id} className="flex items-start gap-2 text-sm">

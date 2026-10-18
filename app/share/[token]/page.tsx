@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CheckCircle2, Download, FileText, IndianRupee } from "lucide-react";
 import { getSharedDocument } from "@/lib/data/share";
-import { money, date } from "@/lib/format";
+import { money, date, todayIST } from "@/lib/format";
+import { Spinner } from "@/components/ui";
 import { DOC_LABEL } from "@/lib/types";
 import { upiUrl } from "@/lib/messaging/templates";
 import { QuoteResponse } from "./quote-response";
@@ -18,6 +19,7 @@ async function SharedDocument({ params }: { params: Promise<{ token: string }> }
   const label = DOC_LABEL[doc.doc_type];
   const payable = ["tax_invoice", "proforma"].includes(doc.doc_type) && doc.balance_due > 0 && doc.status !== "cancelled";
   const pdfUrl = `/api/share/${token}/pdf`;
+  const expired = doc.doc_type === "quotation" && Boolean(doc.valid_until && doc.valid_until < todayIST());
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -60,16 +62,23 @@ async function SharedDocument({ params }: { params: Promise<{ token: string }> }
             </a>
           )}
         </div>
-        {doc.doc_type === "quotation" && ["issued", "sent"].includes(doc.status) && <QuoteResponse token={token} />}
+        {doc.doc_type === "quotation" && ["issued", "sent"].includes(doc.status) && <QuoteResponse token={token} expired={expired} />}
         {doc.doc_type === "quotation" && doc.status === "accepted" && (
           <p className="mt-4 flex items-center gap-2 text-sm font-medium text-emerald-700">
             <CheckCircle2 className="size-4" /> You accepted this quotation.
           </p>
         )}
+        {doc.doc_type === "quotation" && doc.status === "rejected" && (
+          <p className="mt-4 text-sm font-medium text-slate-600">You declined this quotation. Contact us if you&apos;d like a revised one.</p>
+        )}
       </div>
 
-      <div className="card hidden overflow-hidden md:block">
-        <iframe src={pdfUrl} title={`${label} ${doc.number}`} className="h-[80vh] w-full" />
+      <div className="card relative hidden overflow-hidden md:block">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-brand-600">
+          <Spinner className="size-8 border-[3px]" />
+          <span className="text-sm text-slate-500">Loading PDF…</span>
+        </div>
+        <iframe src={pdfUrl} title={`${label} ${doc.number}`} className="relative h-[80vh] w-full" />
       </div>
 
       <p className="text-center text-xs text-slate-400">
@@ -84,7 +93,13 @@ async function SharedDocument({ params }: { params: Promise<{ token: string }> }
 export default function SharePage({ params }: PageProps<"/share/[token]">) {
   return (
     <main className="min-h-screen bg-slate-100 px-4 py-6 sm:py-10">
-      <Suspense fallback={<div className="mx-auto h-48 max-w-3xl animate-pulse rounded-xl bg-white" />}>
+      <Suspense
+        fallback={
+          <div className="flex min-h-[50vh] items-center justify-center text-brand-600">
+            <Spinner className="size-10 border-[3px]" />
+          </div>
+        }
+      >
         <SharedDocument params={params} />
       </Suspense>
     </main>

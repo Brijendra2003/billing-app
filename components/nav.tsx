@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
+import { Spinner } from "@/components/ui";
 import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import {
@@ -59,11 +60,18 @@ function NavList({ path, onNavigate }: { path: string; onNavigate?: () => void }
           >
             <Icon className="size-4.5 shrink-0" />
             {label}
+            <PendingHint />
           </Link>
         );
       })}
     </nav>
   );
+}
+
+/** Small spinner next to a nav item while its page is loading. */
+function PendingHint() {
+  const { pending } = useLinkStatus();
+  return pending ? <Spinner className="ml-auto size-3.5 text-brand-600" /> : null;
 }
 
 function Brand() {

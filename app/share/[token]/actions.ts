@@ -1,12 +1,15 @@
 "use server";
 
 import { getSharedDocument } from "@/lib/data/share";
+import { todayIST } from "@/lib/format";
 
 /** Lets the client accept or decline a quotation from the public share page. */
 export async function respondToQuotation(token: string, response: "accepted" | "rejected"): Promise<boolean> {
   if (response !== "accepted" && response !== "rejected") return false;
   const shared = await getSharedDocument(token);
   if (!shared || shared.doc.doc_type !== "quotation" || !["issued", "sent"].includes(shared.doc.status)) return false;
+  // An expired quotation can't be accepted any more (declining is still fine).
+  if (response === "accepted" && shared.doc.valid_until && shared.doc.valid_until < todayIST()) return false;
 
   const { admin, doc } = shared;
   const { error } = await admin.from("documents").update({ status: response }).eq("id", doc.id);

@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Form from "next/form";
 import type { Metadata } from "next";
+import { SubmitButton } from "@/components/submit-button";
 import { MessageCircle, Plus } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { EmptyState, PageHeader } from "@/components/ui";
@@ -59,11 +61,11 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
             </Link>
           ))}
         </div>
-        <form action="/clients" className="flex gap-2">
+        <Form action="/clients" className="flex gap-2">
           {filter && <input type="hidden" name="filter" value={filter} />}
           <input name="q" defaultValue={q} placeholder="Name, phone, GSTIN, city…" className="input h-9 sm:w-64" />
-          <button className="btn-secondary btn-sm">Search</button>
-        </form>
+          <SubmitButton className="btn-secondary btn-sm">Search</SubmitButton>
+        </Form>
       </div>
 
       {list.length === 0 ? (

@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Form from "next/form";
 import type { Metadata } from "next";
+import { SubmitButton } from "@/components/submit-button";
 import { ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { loadMonthlyReport } from "@/lib/data/reports";
@@ -63,10 +65,10 @@ export default async function ReportsPage({ searchParams }: PageProps<"/reports"
           <Link href={`/reports?month=${shiftMonth(month, -1)}`} className="btn-secondary btn-sm" aria-label="Previous month">
             <ChevronLeft className="size-4" />
           </Link>
-          <form action="/reports" className="flex gap-2">
+          <Form action="/reports" className="flex gap-2">
             <input type="month" name="month" defaultValue={month} max={current} className="input h-8 w-40 py-1" />
-            <button className="btn-secondary btn-sm">Go</button>
-          </form>
+            <SubmitButton className="btn-secondary btn-sm">Go</SubmitButton>
+          </Form>
           {month < current && (
             <Link href={`/reports?month=${shiftMonth(month, 1)}`} className="btn-secondary btn-sm" aria-label="Next month">
               <ChevronRight className="size-4" />

@@ -35,6 +35,15 @@ export async function getDocumentWithItems(supabase: SupabaseClient, id: string)
   return { doc: normalizeDoc(doc), items: (items ?? []).map(normalizeItem) };
 }
 
+/** Documents that may still be edited after being issued (GST tax invoices / credit notes are frozen). */
+export function isEditable(doc: Pick<DocumentRow, "status" | "doc_type">) {
+  if (doc.status === "draft") return true;
+  return (
+    (doc.doc_type === "quotation" || doc.doc_type === "proforma") &&
+    ["issued", "sent", "accepted", "rejected"].includes(doc.status)
+  );
+}
+
 /** Overdue / expired are derived from dates rather than stored. */
 export function displayStatus(
   doc: Pick<DocumentRow, "doc_type" | "status" | "due_date" | "valid_until" | "balance_due">,

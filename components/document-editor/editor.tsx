@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, FileCheck2, Loader2, Plus, Printer, Save, Trash2, Truck } from "lucide-react";
+import { Copy, FileCheck2, Plus, Printer, Save, Trash2, Truck } from "lucide-react";
+import { Spinner } from "@/components/ui";
 import { Combobox } from "@/components/combobox";
 import { saveDocument } from "@/app/actions/documents";
 import { calculateTotals, DIM_UNIT_LABEL, areaSqft } from "@/lib/tax/calculate";
@@ -141,6 +142,7 @@ export function DocumentEditor({
   const [backup, setBackup] = useState(business.auto_backup_drive);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [saving, setSaving] = useState<"draft" | "issue" | "print" | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
 
   const isDraft = s.status === "draft";
@@ -248,6 +250,7 @@ export function DocumentEditor({
 
   function submit(mode: "draft" | "issue" | "print") {
     setError(null);
+    setSaving(mode);
     // Open the print window synchronously so pop-up blockers allow it.
     const printWindow = mode === "print" ? window.open("about:blank", "_blank") : null;
 
@@ -330,7 +333,7 @@ export function DocumentEditor({
               <span className="label">Valid until</span>
               <input type="date" className="input" value={s.valid_until} onChange={(e) => update({ valid_until: e.target.value })} />
             </label>
-          ) : (
+          ) : s.doc_type === "credit_note" ? null : (
             <label className="block">
               <span className="label">Due date</span>
               <input type="date" className="input" value={s.due_date} onChange={(e) => update({ due_date: e.target.value })} />
@@ -592,15 +595,15 @@ export function DocumentEditor({
             </button>
             {isDraft ? (
               <button type="button" className="btn-secondary" onClick={() => submit("draft")} disabled={pending}>
-                <Save className="size-4" /> Save draft
+                {pending && saving === "draft" ? <Spinner /> : <Save className="size-4" />} Save draft
               </button>
             ) : (
               <button type="button" className="btn-secondary" onClick={() => submit("issue")} disabled={pending}>
-                <FileCheck2 className="size-4" /> Save
+                {pending && saving === "issue" ? <Spinner /> : <FileCheck2 className="size-4" />} Save
               </button>
             )}
             <button type="button" className="btn-dark" onClick={() => submit("print")} disabled={pending}>
-              {pending ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />}
+              {pending && saving === "print" ? <Spinner /> : <Printer className="size-4" />}
               Save & Print
             </button>
           </div>

@@ -25,7 +25,8 @@ const s = StyleSheet.create({
   row: { flexDirection: "row" },
   header: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 2, borderBottomColor: BRAND, paddingBottom: 10 },
   logo: { width: 64, height: 64, objectFit: "contain", marginRight: 10 },
-  company: { fontSize: 15, fontWeight: 700, color: BRAND, lineHeight: 1.25, marginBottom: 2 },
+  // Serif bold to match the "S.N. SAFETY" lettering in the logo (Times is a built-in PDF font)
+  company: { fontFamily: "Times-Bold", fontSize: 18, color: BRAND, letterSpacing: 0.5, lineHeight: 1.2, marginBottom: 2 },
   muted: { color: MUTED },
   title: { fontSize: 15, fontWeight: 700, textAlign: "right", color: "#0f172a", letterSpacing: 1, lineHeight: 1.25, marginBottom: 3 },
   metaRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 1.5 },
@@ -45,6 +46,8 @@ const s = StyleSheet.create({
   box: { borderWidth: 1, borderColor: BORDER, padding: 8 },
   totalsRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   grand: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#0f172a", marginTop: 4, paddingTop: 5 },
+  stamp: { position: "absolute", left: 18, top: 2, width: 62, height: 62, objectFit: "contain", opacity: 0.85 },
+  signature: { width: 110, height: 40, marginLeft: 40, objectFit: "contain" },
   sectionLabel: { fontSize: 7.5, fontWeight: 700, color: BRAND, textTransform: "uppercase", marginBottom: 3 },
   watermark: {
     position: "absolute", top: 330, left: 0, right: 0, textAlign: "center",
@@ -58,6 +61,7 @@ const COLS = { sn: "5%", item: "35%", hsn: "10%", qty: "10%", rate: "11%", disc:
 export interface PdfAssets {
   logo?: string | null;
   signature?: string | null;
+  stamp?: string | null;
   paymentQr?: string | null; // data URI (generated UPI QR or uploaded image)
 }
 
@@ -158,14 +162,8 @@ export function DocumentPdf({
             </View>
             {isQuote && doc.valid_until ? (
               <View style={s.metaRow}>
-                <Text style={s.metaLabel}>Valid until</Text>
+                <Text style={s.metaLabel}>Valid</Text>
                 <Text style={s.metaValue}>{date(doc.valid_until)}</Text>
-              </View>
-            ) : null}
-            {!isQuote && doc.due_date ? (
-              <View style={s.metaRow}>
-                <Text style={s.metaLabel}>Due date</Text>
-                <Text style={s.metaValue}>{date(doc.due_date)}</Text>
               </View>
             ) : null}
             {doc.place_of_supply_state_code ? (
@@ -174,12 +172,6 @@ export function DocumentPdf({
                 <Text style={s.metaValue}>
                   {stateName(doc.place_of_supply_state_code)} ({doc.place_of_supply_state_code})
                 </Text>
-              </View>
-            ) : null}
-            {doc.reference ? (
-              <View style={s.metaRow}>
-                <Text style={s.metaLabel}>Reference</Text>
-                <Text style={s.metaValue}>{doc.reference}</Text>
               </View>
             ) : null}
           </View>
@@ -297,7 +289,7 @@ export function DocumentPdf({
                 {assets.paymentQr ? (
                   <View style={{ alignItems: "center", marginLeft: 6 }}>
                     {/* eslint-disable-next-line jsx-a11y/alt-text */}
-                    <Image src={assets.paymentQr} style={{ width: 72, height: 72 }} />
+                    <Image src={assets.paymentQr} style={{ width: 76, height: 86, objectFit: "contain" }} />
                     <Text style={[s.muted, { fontSize: 6.5 }]}>Scan to pay</Text>
                   </View>
                 ) : null}
@@ -364,10 +356,14 @@ export function DocumentPdf({
               ) : null}
             </View>
 
-            <View style={[s.box, { marginTop: 6, alignItems: "center", minHeight: 80 }]}>
+            <View style={[s.box, { marginTop: 6, alignItems: "center" }]}>
               <Text style={[s.bold, { fontSize: 7.5 }]}>For {business.name}</Text>
-              {/* eslint-disable-next-line jsx-a11y/alt-text */}
-              {assets.signature ? <Image src={assets.signature} style={{ height: 40, marginVertical: 4, objectFit: "contain" }} /> : <View style={{ height: 40 }} />}
+              <View style={{ width: "100%", height: 66, alignItems: "center", justifyContent: "center" }}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                {assets.stamp ? <Image src={assets.stamp} style={s.stamp} /> : null}
+                {/* eslint-disable-next-line jsx-a11y/alt-text */}
+                {assets.signature ? <Image src={assets.signature} style={s.signature} /> : null}
+              </View>
               <Text style={[s.muted, { fontSize: 7.5 }]}>Authorized Signatory</Text>
             </View>
           </View>

@@ -11,9 +11,9 @@ const nextConfig: NextConfig = {
   },
   cacheComponents: true,
   partialPrefetching: true,
-  // PDF fonts are read from disk at runtime, so make sure they ship with server functions.
+  // PDF fonts and default branding images are read from disk at runtime, so make sure they ship with server functions.
   outputFileTracingIncludes: {
-    "/**": ["./lib/pdf/fonts/**/*"],
+    "/**": ["./lib/pdf/fonts/**/*", "./lib/pdf/assets/**/*"],
   },
   turbopack: {
     rules: {

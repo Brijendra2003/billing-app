@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui";
 import { saveProduct } from "@/app/actions/crm";
 import type { Product } from "@/lib/types";
 
@@ -13,7 +14,13 @@ export function ProductForm({ product, defaultTaxRate, onDone }: { product?: Pro
 
   useEffect(() => {
     if (state?.message) {
-      if (!product) formRef.current?.reset();
+      if (product) {
+        // Leave edit mode (drops ?edit=…) so the form is ready for the next new product.
+        if (onDone) onDone();
+        else router.push("/products");
+        return;
+      }
+      formRef.current?.reset();
       router.refresh();
       onDone?.();
     }
@@ -58,10 +65,15 @@ export function ProductForm({ product, defaultTaxRate, onDone }: { product?: Pro
           <option value="area">Per sq ft (by size)</option>
         </select>
       </label>
-      <div className="col-span-2 flex items-end md:col-span-1">
+      <div className="col-span-2 flex items-end gap-2 md:col-span-1">
         <button className="btn-primary w-full" disabled={pending}>
-          {pending && <Loader2 className="size-4 animate-spin" />} {product ? "Save" : "Add"}
+          {pending && <Spinner />} {product ? "Save" : "Add"}
         </button>
+        {product && !onDone && (
+          <Link href="/products" className="btn-ghost px-2" title="Cancel editing">
+            Cancel
+          </Link>
+        )}
       </div>
       {state?.error && <p className="col-span-2 text-sm text-red-600 md:col-span-6">{state.error}</p>}
       {state?.message && !product && <p className="col-span-2 text-sm text-emerald-700 md:col-span-6">{state.message}</p>}

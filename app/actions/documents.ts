@@ -7,7 +7,7 @@ import { documentSchema, type DocumentInput } from "@/lib/validation/document";
 import { calculateTotals } from "@/lib/tax/calculate";
 import { normalizePhone } from "@/lib/india";
 import { addDays, monthLabel, todayIST } from "@/lib/format";
-import { fileName, getDocumentWithItems } from "@/lib/data/documents";
+import { fileName, getDocumentWithItems, isEditable } from "@/lib/data/documents";
 import { renderDocumentPdf } from "@/lib/pdf/render";
 import { backupToDrive, sendEmailViaGas } from "@/lib/messaging/gas";
 import type { DocType, DocumentRow } from "@/lib/types";
@@ -32,15 +32,6 @@ async function log(ctx: AppContext, entityId: string, action: string, details: R
 
 /** Escape LIKE wildcards so ilike behaves as a case-insensitive equality. */
 const likeExact = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`);
-
-/** Documents that may still be edited after being issued (GST invoices are frozen). */
-function isEditable(doc: Pick<DocumentRow, "status" | "doc_type">) {
-  if (doc.status === "draft") return true;
-  return (
-    (doc.doc_type === "quotation" || doc.doc_type === "proforma") &&
-    ["issued", "sent", "accepted", "rejected"].includes(doc.status)
-  );
-}
 
 async function resolveClient(ctx: AppContext, input: z.infer<typeof documentSchema>): Promise<string> {
   const { supabase, business } = ctx;
@@ -189,7 +180,7 @@ export async function saveDocument(
       ship_to: ship,
       place_of_supply_state_code: pos,
       issue_date: input.issue_date,
-      due_date: input.doc_type === "quotation" ? null : input.due_date,
+      due_date: input.doc_type === "quotation" || input.doc_type === "credit_note" ? null : input.due_date,
       valid_until: input.doc_type === "quotation" ? input.valid_until : null,
       tax_mode: input.tax_mode,
       freight_amount: totals.freight,
@@ -291,9 +282,32 @@ export async function issueDocument(id: string): Promise<ActionResult> {
 export async function deleteDraft(id: string) {
   const ctx = await getContext();
   assertCanWrite(ctx);
-  const { data } = await ctx.supabase.from("documents").select("status, doc_type").eq("id", id).maybeSingle();
+  const { data } = await ctx.supabase.from("documents").select("status, doc_type, converted_from_id").eq("id", id).maybeSingle();
   if (!data || data.status !== "draft") throw new Error("Only drafts can be deleted.");
-  await ctx.supabase.from("documents").delete().eq("id", id);
+
+  // A draft created by "Convert" → hand the payments back and reopen the source,
+  // otherwise deleting it would also delete the carried-over advance (payments cascade)
+  // and leave the quotation/proforma stuck as "converted".
+  if (data.converted_from_id && data.doc_type !== "credit_note") {
+    const { data: source } = await ctx.supabase
+      .from("documents")
+      .select("id, doc_type, status")
+      .eq("id", data.converted_from_id)
+      .maybeSingle();
+    if (source && source.status === "converted") {
+      const { error } = await ctx.supabase
+        .from("documents")
+        .update({ status: source.doc_type === "quotation" ? "accepted" : "issued" })
+        .eq("id", source.id);
+      if (error) throw new Error(error.message);
+      // The payments trigger recomputes the proforma's paid / part-paid status.
+      const { error: payError } = await ctx.supabase.from("payments").update({ document_id: source.id }).eq("document_id", id);
+      if (payError) throw new Error(payError.message);
+    }
+  }
+
+  const { error } = await ctx.supabase.from("documents").delete().eq("id", id);
+  if (error) throw new Error(error.message);
   redirect(data.doc_type === "quotation" ? "/quotations" : "/invoices");
 }
 
@@ -353,6 +367,10 @@ export async function copyDocument(id: string, mode: "convert" | "credit_note" |
   let docType: DocType = doc.doc_type;
   if (mode === "convert") {
     if (!target || target === "quotation" || target === "credit_note") throw new Error("Invalid conversion");
+    if (doc.doc_type !== "quotation" && !(doc.doc_type === "proforma" && target === "tax_invoice")) throw new Error("Invalid conversion");
+    if (["draft", "cancelled", "converted"].includes(doc.status)) {
+      throw new Error(doc.status === "converted" ? "This document has already been converted." : "Issue the document before converting it.");
+    }
     docType = target;
   } else if (mode === "credit_note") {
     if (doc.doc_type !== "tax_invoice" || doc.status === "draft") throw new Error("Credit notes are issued against tax invoices.");
@@ -369,7 +387,7 @@ export async function copyDocument(id: string, mode: "convert" | "credit_note" |
       ship_to: doc.ship_to,
       place_of_supply_state_code: doc.place_of_supply_state_code,
       issue_date: today,
-      due_date: docType === "quotation" ? null : addDays(today, ctx.business.default_due_days),
+      due_date: docType === "quotation" || docType === "credit_note" ? null : addDays(today, ctx.business.default_due_days),
       valid_until: docType === "quotation" ? addDays(today, ctx.business.quotation_validity_days) : null,
       tax_mode: doc.tax_mode,
       freight_amount: doc.freight_amount,
