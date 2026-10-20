@@ -357,9 +357,16 @@ export function DocumentEditor({
           nameLabel="Customer name (auto-search)"
           showContact
         />
-        <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700">
-          <input type="checkbox" className="size-4 accent-brand-600" checked={s.ship_enabled} onChange={(e) => update({ ship_enabled: e.target.checked })} />
-          Ship to a different address?
+        <label className="mt-4 inline-flex cursor-pointer items-center gap-3 text-sm font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            role="switch"
+            className="peer sr-only"
+            checked={s.ship_enabled}
+            onChange={(e) => update({ ship_enabled: e.target.checked })}
+          />
+          <span className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-brand-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-2" />
+          Include shipping address
         </label>
         {s.ship_enabled && (
           <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-4">

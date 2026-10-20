@@ -19,6 +19,7 @@ Font.registerHyphenationCallback((word) => [word]);
 const BRAND = "#1d4ed8";
 const BORDER = "#cbd5e1";
 const MUTED = "#475569";
+const RADIUS = 6;
 
 const s = StyleSheet.create({
   page: { fontFamily: "Noto", fontSize: 8.5, padding: 28, color: "#0f172a", lineHeight: 1.35 },
@@ -32,22 +33,25 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: "row", justifyContent: "flex-end", marginTop: 1.5 },
   metaLabel: { color: MUTED, width: 78, textAlign: "right", marginRight: 6 },
   metaValue: { fontWeight: 700, minWidth: 80, textAlign: "right" },
-  parties: { flexDirection: "row", marginTop: 10, borderWidth: 1, borderColor: BORDER },
+  parties: { flexDirection: "row", marginTop: 10, borderWidth: 1, borderColor: BORDER, borderRadius: RADIUS },
   party: { flex: 1, padding: 8 },
   partyLabel: { fontSize: 7.5, fontWeight: 700, color: BRAND, textTransform: "uppercase", marginBottom: 3 },
   partyName: { fontSize: 10, fontWeight: 700, lineHeight: 1.3 },
-  table: { marginTop: 10, borderWidth: 1, borderColor: BORDER },
-  th: { flexDirection: "row", backgroundColor: "#eff6ff", borderBottomWidth: 1, borderBottomColor: BORDER, fontWeight: 700, fontSize: 7.5 },
+  table: { marginTop: 10, borderWidth: 1, borderColor: BORDER, borderRadius: RADIUS },
+  th: {
+    flexDirection: "row", backgroundColor: "#eff6ff", borderBottomWidth: 1, borderBottomColor: BORDER, fontWeight: 700, fontSize: 7.5,
+    borderTopLeftRadius: RADIUS - 1, borderTopRightRadius: RADIUS - 1,
+  },
   tr: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#e2e8f0" },
   cell: { paddingVertical: 4, paddingHorizontal: 4 },
   right: { textAlign: "right" },
   bold: { fontWeight: 700 },
   bottom: { flexDirection: "row", marginTop: 10 },
-  box: { borderWidth: 1, borderColor: BORDER, padding: 8 },
+  box: { borderWidth: 1, borderColor: BORDER, borderRadius: RADIUS, padding: 8 },
   totalsRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 2 },
   grand: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: "#0f172a", marginTop: 4, paddingTop: 5 },
-  stamp: { position: "absolute", left: 18, top: 2, width: 62, height: 62, objectFit: "contain", opacity: 0.85 },
-  signature: { width: 110, height: 40, marginLeft: 40, objectFit: "contain" },
+  stamp: { width: 62, height: 62, objectFit: "contain", opacity: 0.85, marginBottom: 4 },
+  signature: { width: 110, height: 40, objectFit: "contain" },
   sectionLabel: { fontSize: 7.5, fontWeight: 700, color: BRAND, textTransform: "uppercase", marginBottom: 3 },
   watermark: {
     position: "absolute", top: 330, left: 0, right: 0, textAlign: "center",
@@ -160,12 +164,6 @@ export function DocumentPdf({
               <Text style={s.metaLabel}>Date</Text>
               <Text style={s.metaValue}>{date(doc.issue_date)}</Text>
             </View>
-            {isQuote && doc.valid_until ? (
-              <View style={s.metaRow}>
-                <Text style={s.metaLabel}>Valid</Text>
-                <Text style={s.metaValue}>{date(doc.valid_until)}</Text>
-              </View>
-            ) : null}
             {doc.place_of_supply_state_code ? (
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>Place of supply</Text>
@@ -238,37 +236,6 @@ export function DocumentPdf({
               <Text style={s.sectionLabel}>Amount in words</Text>
               <Text style={s.bold}>{amountInWords(totals.grandTotal)}</Text>
             </View>
-
-            {totals.totalTax > 0 ? (
-              <View style={[s.box, { marginBottom: 6, padding: 0 }]}>
-                <View style={[s.th, { borderBottomWidth: 1 }]}>
-                  <Text style={[s.cell, { width: "16%" }]}>GST %</Text>
-                  <Text style={[s.cell, s.right, { width: "28%" }]}>Taxable</Text>
-                  {inter ? (
-                    <Text style={[s.cell, s.right, { width: "56%" }]}>IGST</Text>
-                  ) : (
-                    <>
-                      <Text style={[s.cell, s.right, { width: "28%" }]}>CGST</Text>
-                      <Text style={[s.cell, s.right, { width: "28%" }]}>SGST</Text>
-                    </>
-                  )}
-                </View>
-                {totals.buckets.map((b) => (
-                  <View key={b.rate} style={s.row}>
-                    <Text style={[s.cell, { width: "16%" }]}>{number(b.rate)}%</Text>
-                    <Text style={[s.cell, s.right, { width: "28%" }]}>{money(b.taxable)}</Text>
-                    {inter ? (
-                      <Text style={[s.cell, s.right, { width: "56%" }]}>{money(b.igst)}</Text>
-                    ) : (
-                      <>
-                        <Text style={[s.cell, s.right, { width: "28%" }]}>{money(b.cgst)}</Text>
-                        <Text style={[s.cell, s.right, { width: "28%" }]}>{money(b.sgst)}</Text>
-                      </>
-                    )}
-                  </View>
-                ))}
-              </View>
-            ) : null}
 
             {showBank || assets.paymentQr ? (
               <View style={[s.box, s.row]}>
@@ -358,7 +325,7 @@ export function DocumentPdf({
 
             <View style={[s.box, { marginTop: 6, alignItems: "center" }]}>
               <Text style={[s.bold, { fontSize: 7.5 }]}>For {business.name}</Text>
-              <View style={{ width: "100%", height: 66, alignItems: "center", justifyContent: "center" }}>
+              <View style={{ width: "100%", minHeight: 66, alignItems: "center", justifyContent: "center", paddingVertical: 4 }}>
                 {/* eslint-disable-next-line jsx-a11y/alt-text */}
                 {assets.stamp ? <Image src={assets.stamp} style={s.stamp} /> : null}
                 {/* eslint-disable-next-line jsx-a11y/alt-text */}
