@@ -129,7 +129,7 @@ export function DocumentPdf({
   const sellerAddr = [business.address, [business.city, business.pincode].filter(Boolean).join(" - "), business.state]
     .filter(Boolean)
     .join(", ");
-  const showBank = !isQuote && business.bank_account_no;
+  const showBank = business.bank_account_no;
 
   return (
     <Document title={`${DOC_TITLE[doc.doc_type]} ${doc.number ?? ""}`} author={business.name}>

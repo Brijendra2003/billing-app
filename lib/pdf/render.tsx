@@ -44,7 +44,7 @@ export async function loadPdfAssets(supabase: SupabaseClient, business: Business
   const signature = uploadedSignature ?? defaultSignature;
 
   let paymentQr: string | null = null;
-  const payable = doc.doc_type !== "quotation" && doc.doc_type !== "credit_note" && doc.status !== "cancelled";
+  const payable = doc.doc_type !== "credit_note" && doc.status !== "cancelled";
   // Prefer the business's own scanner QR (uploaded, else bundled); fall back to a generated UPI QR
   if (payable && (uploadedQr || defaultQr)) {
     paymentQr = uploadedQr ?? defaultQr;
