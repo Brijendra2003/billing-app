@@ -6,6 +6,7 @@ import { displayStatus, isEditable, normalizeDoc } from "@/lib/data/documents";
 import { date, money, todayIST } from "@/lib/format";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
+import { DeleteDocumentButton } from "@/components/small-actions";
 import { DOC_LABEL, type DocType } from "@/lib/types";
 
 export interface ListFilters {
@@ -136,7 +137,7 @@ export async function DocumentList({
                 <th className="text-right">Amount</th>
                 <th className="hidden text-right md:table-cell">Balance</th>
                 <th>Status</th>
-                <th className="w-24 text-right">
+                <th className="w-32 text-right">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
@@ -177,6 +178,9 @@ export async function DocumentList({
                       >
                         <FileDown className="size-4" />
                       </a>
+                      {canWrite && (
+                        <DeleteDocumentButton id={d.id} label={`${DOC_LABEL[d.doc_type].toLowerCase()} ${d.number ?? "(draft)"}`} />
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -6,7 +6,7 @@ import { displayStatus, normalizeDoc } from "@/lib/data/documents";
 import { buildLedger } from "@/lib/ledger";
 import { addFollowup, archiveClient } from "@/app/actions/crm";
 import { PageHeader, Stat, StatusBadge } from "@/components/ui";
-import { FollowupCheckbox } from "@/components/small-actions";
+import { DeleteClientButton, FollowupCheckbox } from "@/components/small-actions";
 import { PrintButton } from "@/components/print-button";
 import { SubmitButton } from "@/components/submit-button";
 import { date, dateTime, money, todayIST } from "@/lib/format";
@@ -102,6 +102,15 @@ export default async function ClientPage({ params, searchParams }: PageProps<"/c
                 {client.is_archived ? "Restore" : "Archive"}
               </SubmitButton>
             </form>
+            <DeleteClientButton
+              id={client.id}
+              name={client.name}
+              counts={{
+                quotations: docs.filter((d) => d.doc_type === "quotation").length,
+                invoices: docs.filter((d) => d.doc_type !== "quotation").length,
+                payments: payments.length,
+              }}
+            />
           </>
         )}
       </div>

@@ -9,12 +9,10 @@ import { DOC_LABEL } from "@/lib/types";
 export default async function EditDocumentPage({ params }: PageProps<"/documents/[id]/edit">) {
   const ctx = await getContext();
   const { id } = await params;
-  const loaded = await getDocumentWithItems(ctx.supabase, id);
+  const [loaded, options] = await Promise.all([getDocumentWithItems(ctx.supabase, id), loadEditorOptions(ctx)]);
   if (!loaded) notFound();
   const { doc, items } = loaded;
   if (ctx.role === "viewer" || !isEditable(doc)) redirect(`/documents/${id}`);
-
-  const options = await loadEditorOptions(ctx);
   return (
     <>
       <PageHeader

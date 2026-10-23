@@ -12,7 +12,6 @@ import {
   FileCheck2,
   FileMinus,
   Link2,
-  FileText,
   Mail,
   MessageCircle,
   Pencil,
@@ -29,7 +28,6 @@ import { Spinner } from "@/components/ui";
 import {
   cancelDocument,
   copyDocument,
-  deleteDraft,
   issueDocument,
   logWhatsapp,
   regenerateShareLink,
@@ -37,9 +35,10 @@ import {
   setQuotationStatus,
 } from "@/app/actions/documents";
 import { recordPayment } from "@/app/actions/crm";
+import { trashDocument } from "@/app/actions/trash";
 import { whatsappUrl } from "@/lib/messaging/templates";
 import { money } from "@/lib/format";
-import { PAYMENT_METHOD_LABEL, type DocType, type DocStatus, type PaymentMethod } from "@/lib/types";
+import { DOC_LABEL, PAYMENT_METHOD_LABEL, type DocType, type DocStatus, type PaymentMethod } from "@/lib/types";
 
 export interface DocActionProps {
   id: string;
@@ -58,7 +57,7 @@ export interface DocActionProps {
   messages: { link: string; emailSubject: string; emailBody: string; whatsapp: string; reminder: string };
 }
 
-type Busy = "issue" | "accept" | "reject" | "invoice" | "proforma" | "credit" | "duplicate" | "reset" | "delete" | "download";
+type Busy = "issue" | "accept" | "reject" | "invoice" | "credit" | "duplicate" | "reset" | "delete" | "download";
 
 export function DocumentActions(p: DocActionProps) {
   const router = useRouter();
@@ -175,9 +174,6 @@ export function DocumentActions(p: DocActionProps) {
               >
                 {icon("invoice", FileCheck2)} Convert to invoice
               </button>
-              <button className="btn-ghost btn-sm" disabled={pending} onClick={() => run("proforma", () => copyDocument(p.id, "convert", "proforma"))}>
-                {icon("proforma", FileText)} Convert to proforma
-              </button>
             </>
           )}
           {p.docType === "proforma" && !isDraft && !["converted", "cancelled"].includes(p.status) && (
@@ -224,17 +220,17 @@ export function DocumentActions(p: DocActionProps) {
               <Ban className="size-3.5" /> Cancel
             </button>
           )}
-          {isDraft && (
-            <button
-              className="btn-ghost btn-sm text-red-600"
-              disabled={pending}
-              onClick={() => {
-                if (confirm("Delete this draft?")) run("delete", () => deleteDraft(p.id));
-              }}
-            >
-              {icon("delete", Trash2)} Delete draft
-            </button>
-          )}
+          <button
+            className="btn-ghost btn-sm text-red-600"
+            disabled={pending}
+            onClick={() => {
+              const what = `${DOC_LABEL[p.docType].toLowerCase()}${p.number ? ` ${p.number}` : ""}`;
+              if (confirm(`Delete ${what}? It moves to Trash with its payments, and you can restore it within 30 days.`))
+                run("delete", () => trashDocument(p.id));
+            }}
+          >
+            {icon("delete", Trash2)} Delete
+          </button>
         </div>
       )}
 

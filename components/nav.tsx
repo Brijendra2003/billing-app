@@ -15,6 +15,7 @@ import {
   Package,
   Receipt,
   Settings,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/tools/area-calculator", label: "Area Calculator", icon: Calculator },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/trash", label: "Trash", icon: Trash2 },
 ];
 
 function NavLinks(props: { onNavigate?: () => void }) {

@@ -279,38 +279,6 @@ export async function issueDocument(id: string): Promise<ActionResult> {
   }
 }
 
-export async function deleteDraft(id: string) {
-  const ctx = await getContext();
-  assertCanWrite(ctx);
-  const { data } = await ctx.supabase.from("documents").select("status, doc_type, converted_from_id").eq("id", id).maybeSingle();
-  if (!data || data.status !== "draft") throw new Error("Only drafts can be deleted.");
-
-  // A draft created by "Convert" → hand the payments back and reopen the source,
-  // otherwise deleting it would also delete the carried-over advance (payments cascade)
-  // and leave the quotation/proforma stuck as "converted".
-  if (data.converted_from_id && data.doc_type !== "credit_note") {
-    const { data: source } = await ctx.supabase
-      .from("documents")
-      .select("id, doc_type, status")
-      .eq("id", data.converted_from_id)
-      .maybeSingle();
-    if (source && source.status === "converted") {
-      const { error } = await ctx.supabase
-        .from("documents")
-        .update({ status: source.doc_type === "quotation" ? "accepted" : "issued" })
-        .eq("id", source.id);
-      if (error) throw new Error(error.message);
-      // The payments trigger recomputes the proforma's paid / part-paid status.
-      const { error: payError } = await ctx.supabase.from("payments").update({ document_id: source.id }).eq("document_id", id);
-      if (payError) throw new Error(payError.message);
-    }
-  }
-
-  const { error } = await ctx.supabase.from("documents").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-  redirect(data.doc_type === "quotation" ? "/quotations" : "/invoices");
-}
-
 export async function cancelDocument(id: string, reason: string): Promise<ActionResult> {
   try {
     const ctx = await getContext();

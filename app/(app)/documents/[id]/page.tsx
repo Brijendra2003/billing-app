@@ -21,7 +21,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
   const { doc, items } = loaded;
   const today = todayIST();
 
-  const [{ data: payments }, { data: comms }, { data: related }, { data: activity }] = await Promise.all([
+  const [{ data: payments }, { data: comms }, { data: related }, { data: activity }, { data: client }] = await Promise.all([
     ctx.supabase.from("payments").select("*").eq("document_id", id).order("paid_on"),
     ctx.supabase.from("communications").select("*").eq("document_id", id).order("created_at", { ascending: false }).limit(20),
     ctx.supabase
@@ -29,6 +29,9 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
       .select("id, doc_type, number, status, grand_total, converted_from_id")
       .or(`converted_from_id.eq.${id}${doc.converted_from_id ? `,id.eq.${doc.converted_from_id}` : ""}`),
     ctx.supabase.from("activity_log").select("action, details, created_at").eq("entity_id", id).order("created_at", { ascending: false }).limit(15),
+    doc.client_id
+      ? ctx.supabase.from("clients").select("email, phone, whatsapp").eq("id", doc.client_id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const status = displayStatus(doc, today);
@@ -36,9 +39,6 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
   const canWrite = ctx.role !== "viewer";
   const editable = canWrite && isEditable(doc);
   const listHref = doc.doc_type === "quotation" ? "/quotations" : "/invoices";
-  const { data: client } = doc.client_id
-    ? await ctx.supabase.from("clients").select("email, phone, whatsapp").eq("id", doc.client_id).maybeSingle()
-    : { data: null };
 
   return (
     <div className="space-y-5">

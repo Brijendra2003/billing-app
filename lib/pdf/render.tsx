@@ -8,6 +8,21 @@ import { DocumentPdf, type PdfAssets } from "@/lib/pdf/document-pdf";
 import { upiUrl } from "@/lib/messaging/templates";
 import type { Business, DocumentItem, DocumentRow } from "@/lib/types";
 
+// Branding images rarely change, so keep them in memory instead of re-downloading
+// them for every PDF. Every upload gets a new timestamped path, so a path never goes stale.
+const imageCache = new Map<string, Promise<string | null>>();
+function cached(key: string, load: () => Promise<string | null>) {
+  let hit = imageCache.get(key);
+  if (!hit) {
+    hit = load().then((v) => {
+      if (v === null) imageCache.delete(key); // retry failures next time
+      return v;
+    });
+    imageCache.set(key, hit);
+  }
+  return hit;
+}
+
 async function downloadAsDataUri(supabase: SupabaseClient, path: string | null): Promise<string | null> {
   if (!path) return null;
   const { data, error } = await supabase.storage.from("branding").download(path);
@@ -19,22 +34,28 @@ async function downloadAsDataUri(supabase: SupabaseClient, path: string | null):
   return `data:${type};base64,${buf.toString("base64")}`;
 }
 
+function uploaded(supabase: SupabaseClient, path: string | null) {
+  return path ? cached(path, () => downloadAsDataUri(supabase, path)) : Promise.resolve(null);
+}
+
 // Bundled SN Safety branding, used when nothing has been uploaded in Settings
 const assetDir = path.join(process.cwd(), "lib", "pdf", "assets");
-async function bundledPng(name: string): Promise<string | null> {
-  try {
-    const buf = await fs.readFile(path.join(assetDir, name));
-    return `data:image/png;base64,${buf.toString("base64")}`;
-  } catch {
-    return null;
-  }
+function bundledPng(name: string): Promise<string | null> {
+  return cached(`bundled:${name}`, async () => {
+    try {
+      const buf = await fs.readFile(path.join(assetDir, name));
+      return `data:image/png;base64,${buf.toString("base64")}`;
+    } catch {
+      return null;
+    }
+  });
 }
 
 export async function loadPdfAssets(supabase: SupabaseClient, business: Business, doc: DocumentRow): Promise<PdfAssets> {
   const [uploadedLogo, uploadedSignature, uploadedQr, defaultLogo, defaultSignature, stamp, defaultQr] = await Promise.all([
-    downloadAsDataUri(supabase, business.logo_path),
-    downloadAsDataUri(supabase, business.signature_path),
-    downloadAsDataUri(supabase, business.payment_qr_path),
+    uploaded(supabase, business.logo_path),
+    uploaded(supabase, business.signature_path),
+    uploaded(supabase, business.payment_qr_path),
     bundledPng("logo.png"),
     bundledPng("signature.png"),
     bundledPng("stamp.png"),

@@ -25,13 +25,15 @@ export function normalizeItem(row: Record<string, unknown>): DocumentItem {
 }
 
 export async function getDocumentWithItems(supabase: SupabaseClient, id: string) {
-  const { data: doc } = await supabase.from("documents").select("*").eq("id", id).maybeSingle();
-  if (!doc) return null;
-  const { data: items } = await supabase
-    .from("document_items")
-    .select("*")
-    .eq("document_id", id)
-    .order("position");
+  // One round-trip: the items are embedded in the document row.
+  const { data } = await supabase
+    .from("documents")
+    .select("*, document_items(*)")
+    .eq("id", id)
+    .order("position", { referencedTable: "document_items" })
+    .maybeSingle();
+  if (!data) return null;
+  const { document_items: items, ...doc } = data as { document_items: Record<string, unknown>[] | null };
   return { doc: normalizeDoc(doc), items: (items ?? []).map(normalizeItem) };
 }
 

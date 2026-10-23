@@ -35,7 +35,7 @@ See [Architecture.md](Architecture.md) for the design.
 ### 1. Supabase
 
 1. Create a project at [supabase.com](https://supabase.com). The **Mumbai (ap-south-1)** region is fastest from India.
-2. Open **SQL Editor**, paste all of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), and click **Run**. Then do the same with [`0002_bootstrap_orphan.sql`](supabase/migrations/0002_bootstrap_orphan.sql).
+2. Open **SQL Editor**, paste all of [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql), and click **Run**. Then do the same with [`0002_bootstrap_orphan.sql`](supabase/migrations/0002_bootstrap_orphan.sql), [`0003_trash.sql`](supabase/migrations/0003_trash.sql) and [`0004_performance.sql`](supabase/migrations/0004_performance.sql), in that order.
 3. Go to **Authentication → Sign In / Providers → Email**:
    - Keep Email enabled.
    - Turn **"Allow new users to sign up" OFF**. Only accounts you create can log in.

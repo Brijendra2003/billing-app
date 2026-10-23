@@ -7,7 +7,7 @@ import type { Business } from "@/lib/types";
 export async function getSharedDocument(token: string) {
   if (!/^[a-f0-9]{32,128}$/.test(token)) return null;
   const admin = createAdminClient();
-  const { data: doc } = await admin.from("documents").select("*").eq("share_token", token).maybeSingle();
+  const { data: doc } = await admin.from("documents").select("*").eq("share_token", token).is("deleted_at", null).maybeSingle();
   if (!doc || doc.status === "draft") return null;
   const [{ data: items }, { data: business }] = await Promise.all([
     admin.from("document_items").select("*").eq("document_id", doc.id).order("position"),
