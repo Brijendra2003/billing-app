@@ -58,6 +58,8 @@ export const documentSchema = z.object({
   tax_mode: z.enum(["auto", "igst", "cgst_sgst"]),
   freight_amount: z.number().min(0).default(0),
   freight_taxable: z.boolean().default(false),
+  packaging_amount: z.number().min(0).default(0),
+  packaging_taxable: z.boolean().default(true),
   apply_round_off: z.boolean().default(true),
   notes: str(2000),
   terms: str(4000),

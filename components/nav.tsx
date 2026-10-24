@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import {
   BarChart3,
-  Calculator,
   CreditCard,
   FileSpreadsheet,
   FileText,
@@ -28,7 +27,6 @@ const NAV = [
   { href: "/payments", label: "Payments", icon: CreditCard },
   { href: "/products", label: "Products", icon: Package },
   { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/tools/area-calculator", label: "Area Calculator", icon: Calculator },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/trash", label: "Trash", icon: Trash2 },
 ];

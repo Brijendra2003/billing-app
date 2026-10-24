@@ -93,6 +93,26 @@ export default async function DashboardPage({ searchParams }: PageProps<"/dashbo
         <Stat label="Open quotations" value={money(pendingQuotes)} hint={`${quotes?.length ?? 0} awaiting response`} />
       </div>
 
+      <section className="card flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">GST included in this month&apos;s sales</p>
+          <p className="text-xl font-bold tabular-nums text-slate-900">{money(k.totalTax)}</p>
+        </div>
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:flex sm:gap-8">
+          {[
+            ["Taxable value", k.taxable],
+            ["CGST", k.cgst],
+            ["SGST", k.sgst],
+            ["IGST", k.igst],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs text-slate-500">{label}</dt>
+              <dd className="font-semibold tabular-nums text-slate-800">{money(value as number)}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+
       <div className="grid gap-5 lg:grid-cols-3">
         <section className="card card-pad lg:col-span-2">
           <div className="mb-2 flex items-center justify-between">

@@ -4,21 +4,23 @@ import Link from "next/link";
 import Form from "next/form";
 import { SubmitButton } from "@/components/submit-button";
 import { MobileNav, Sidebar } from "@/components/nav";
+import { ProfileMenu } from "@/components/profile-menu";
 import { getContext } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 
 async function UserMenu() {
   const ctx = await getContext();
   return (
-    <div className="flex items-center gap-2">
-      <span className="hidden text-right text-xs leading-tight md:block">
-        <span className="block font-semibold text-slate-800">{ctx.business.name}</span>
-        <span className="text-slate-500">{ctx.email}</span>
-      </span>
+    <ProfileMenu name={ctx.business.name} email={ctx.email}>
       <form action={logout}>
-        <SubmitButton className="btn-ghost px-2" title="Sign out" ariaLabel="Sign out" icon={<LogOut className="size-4.5" />} />
+        <SubmitButton
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+          icon={<LogOut className="size-4" />}
+        >
+          Sign out
+        </SubmitButton>
       </form>
-    </div>
+    </ProfileMenu>
   );
 }
 
@@ -38,12 +40,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               aria-label="Search"
             />
           </Form>
-          <Link href="/invoices/new" className="btn-primary btn-sm hidden sm:inline-flex">
-            <Plus className="size-4" /> New invoice
-          </Link>
-          <Suspense fallback={<div className="h-8 w-8" />}>
-            <UserMenu />
-          </Suspense>
+          <div className="ml-auto flex items-center gap-3">
+            <Link href="/invoices/new" className="btn-primary btn-sm hidden sm:inline-flex">
+              <Plus className="size-4" /> New invoice
+            </Link>
+            <Suspense fallback={<div className="size-8 rounded-full bg-slate-100" />}>
+              <UserMenu />
+            </Suspense>
+          </div>
         </header>
         <main className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 print:max-w-none print:p-0">{children}</main>
       </div>

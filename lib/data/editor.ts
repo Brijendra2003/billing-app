@@ -3,7 +3,7 @@ import type { AppContext } from "@/lib/auth";
 import { addDays, todayIST } from "@/lib/format";
 import { emptyParty, newItem, type ClientOption, type EditorState, type ProductOption } from "@/components/document-editor/model";
 import { stateName } from "@/lib/india";
-import type { DimUnit, DocType, DocumentItem, DocumentRow } from "@/lib/types";
+import type { DocType, DocumentItem, DocumentRow } from "@/lib/types";
 
 export async function loadEditorOptions(ctx: AppContext) {
   const [{ data: clients }, { data: products }] = await Promise.all([
@@ -34,7 +34,7 @@ export async function loadEditorOptions(ctx: AppContext) {
 export function blankEditorState(
   ctx: AppContext,
   docType: DocType,
-  opts: { client?: ClientOption | null; areaItem?: { length: number; breadth: number; unit: DimUnit; rate: number; qty: number } | null } = {},
+  opts: { client?: ClientOption | null } = {},
 ): EditorState {
   const b = ctx.business;
   const today = todayIST();
@@ -78,23 +78,15 @@ export function blankEditorState(
     freight_enabled: false,
     freight_amount: "",
     freight_taxable: b.freight_taxable,
+    packaging_enabled: false,
+    packaging_amount: "",
+    packaging_taxable: true,
     apply_round_off: b.round_off,
     notes: "",
     terms: docType === "quotation" ? b.quotation_terms : b.default_terms,
     reference: "",
     converted_from_id: null,
-    items: [
-      opts.areaItem
-        ? newItem(taxRate, {
-            pricing_mode: "area",
-            length: String(opts.areaItem.length),
-            breadth: String(opts.areaItem.breadth),
-            dimension_unit: opts.areaItem.unit,
-            rate: String(opts.areaItem.rate),
-            qty: String(opts.areaItem.qty),
-          })
-        : newItem(taxRate),
-    ],
+    items: [newItem(taxRate)],
   };
 }
 
@@ -116,6 +108,9 @@ export function editorStateFromDocument(doc: DocumentRow, items: DocumentItem[])
     freight_enabled: doc.freight_amount > 0,
     freight_amount: doc.freight_amount > 0 ? String(doc.freight_amount) : "",
     freight_taxable: doc.freight_taxable,
+    packaging_enabled: doc.packaging_amount > 0,
+    packaging_amount: doc.packaging_amount > 0 ? String(doc.packaging_amount) : "",
+    packaging_taxable: doc.packaging_taxable,
     apply_round_off: doc.apply_round_off,
     notes: doc.notes,
     terms: doc.terms,

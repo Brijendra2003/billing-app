@@ -97,28 +97,43 @@ export function DeleteClientButton({
   id,
   name,
   counts,
+  compact = false,
 }: {
   id: string;
   name: string;
-  counts: { quotations: number; invoices: number; payments: number };
+  /** Omitted on the client list, where the counts aren't loaded. */
+  counts?: { quotations: number; invoices: number; payments: number };
+  /** Icon-only button for table rows. */
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const plural = (n: number, word: string) => (counts ? `${n} ${word}${n === 1 ? "" : "s"}` : `All ${word}s`);
   return (
     <>
-      <button className="btn-ghost btn-sm text-red-600" onClick={() => setOpen(true)}>
-        <Trash2 className="size-4" /> Delete
-      </button>
+      {compact ? (
+        <button
+          className="btn-ghost btn-sm px-2 text-slate-500 hover:text-red-600"
+          title="Delete"
+          aria-label={`Delete ${name}`}
+          onClick={() => setOpen(true)}
+        >
+          <Trash2 className="size-4" />
+        </button>
+      ) : (
+        <button className="btn-ghost btn-sm text-red-600" onClick={() => setOpen(true)}>
+          <Trash2 className="size-4" /> Delete
+        </button>
+      )}
       <Modal open={open} onClose={() => setOpen(false)} title="Delete client">
         <p className="text-sm text-slate-600">
           Delete <b>{name}</b> and everything linked to them?
         </p>
         <ul className="mt-3 list-disc space-y-0.5 pl-5 text-sm text-slate-700">
-          <li>{plural(counts.quotations, "quotation")}</li>
-          <li>{plural(counts.invoices, "invoice")} (incl. proforma and credit notes)</li>
-          <li>{plural(counts.payments, "payment")}</li>
+          <li>{plural(counts?.quotations ?? 0, "quotation")}</li>
+          <li>{plural(counts?.invoices ?? 0, "invoice")} (incl. credit notes)</li>
+          <li>{plural(counts?.payments ?? 0, "payment")}</li>
           <li>Follow-ups and message history</li>
         </ul>
         <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">

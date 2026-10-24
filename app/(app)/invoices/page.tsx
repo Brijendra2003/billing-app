@@ -10,7 +10,6 @@ export const metadata: Metadata = { title: "Invoices" };
 const TYPES = [
   { key: "", label: "All types" },
   { key: "tax_invoice", label: "Tax invoices" },
-  { key: "proforma", label: "Proforma" },
   { key: "credit_note", label: "Credit notes" },
 ];
 
@@ -26,15 +25,8 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
     <>
       <PageHeader
         title="Invoices"
-        subtitle="Tax invoices, proforma invoices and credit notes."
-        actions={
-          <>
-            <Link href="/invoices/new?type=proforma" className="btn-secondary">
-              New proforma
-            </Link>
-            {newButton}
-          </>
-        }
+        subtitle="Tax invoices and credit notes."
+        actions={newButton}
       />
       <div className="mb-3 flex flex-wrap gap-3 text-sm">
         {TYPES.map((t) => {
@@ -55,7 +47,7 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
       </div>
       <DocumentList
         ctx={ctx}
-        types={["tax_invoice", "proforma", "credit_note"]}
+        types={["tax_invoice", "credit_note"]}
         filters={filters}
         basePath="/invoices"
         emptyAction={newButton}

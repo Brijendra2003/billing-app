@@ -25,7 +25,8 @@ export function Modal({
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
+    // text-left / whitespace-normal: modals can be opened from right-aligned, nowrap table cells
+    <div className="fixed inset-0 z-50 flex items-end justify-center whitespace-normal text-left sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-label={title}>
       <div className="absolute inset-0 bg-slate-900/50" onClick={onClose} />
       <div
         className={`relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl ${wide ? "sm:max-w-2xl" : "sm:max-w-md"}`}

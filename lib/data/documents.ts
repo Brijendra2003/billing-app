@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { DocumentItem, DocumentRow } from "@/lib/types";
 
 const NUMERIC_DOC_FIELDS = [
-  "freight_amount", "freight_tax_rate", "subtotal", "taxable_value", "cgst", "sgst", "igst", "total_tax",
+  "freight_amount", "freight_tax_rate", "packaging_amount", "packaging_tax_rate", "subtotal", "taxable_value", "cgst", "sgst", "igst", "total_tax",
   "round_off", "grand_total", "amount_paid", "balance_due",
 ] as const;
 

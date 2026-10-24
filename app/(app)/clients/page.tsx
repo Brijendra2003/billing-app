@@ -5,6 +5,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { MessageCircle, Plus } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { EmptyState, PageHeader } from "@/components/ui";
+import { DeleteClientButton } from "@/components/small-actions";
 import { formatPhone } from "@/lib/india";
 import { money } from "@/lib/format";
 import type { Client } from "@/lib/types";
@@ -31,6 +32,7 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
   const outstanding = new Map<string, number>();
   for (const d of open ?? []) outstanding.set(d.client_id, (outstanding.get(d.client_id) ?? 0) + Number(d.balance_due));
 
+  const canWrite = ctx.role !== "viewer";
   let list = (clients ?? []) as Client[];
   if (filter === "outstanding") list = list.filter((c) => (outstanding.get(c.id) ?? 0) > 0);
 
@@ -84,7 +86,9 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
                 <th className="hidden lg:table-cell">GSTIN</th>
                 <th className="hidden sm:table-cell">City</th>
                 <th className="text-right">Outstanding</th>
-                <th className="w-10" />
+                <th className="w-20">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -105,12 +109,22 @@ export default async function ClientsPage({ searchParams }: PageProps<"/clients"
                     <td className={`whitespace-nowrap text-right tabular-nums ${due > 0 ? "font-semibold text-red-600" : "text-slate-400"}`}>
                       {due > 0 ? money(due) : "—"}
                     </td>
-                    <td>
-                      {wa && (
-                        <a href={`https://wa.me/${wa}`} target="_blank" rel="noopener" aria-label={`WhatsApp ${c.name}`} className="text-[#25D366]">
-                          <MessageCircle className="size-4.5" />
-                        </a>
-                      )}
+                    <td className="whitespace-nowrap text-right">
+                      <div className="inline-flex items-center gap-0.5">
+                        {wa && (
+                          <a
+                            href={`https://wa.me/${wa}`}
+                            target="_blank"
+                            rel="noopener"
+                            aria-label={`WhatsApp ${c.name}`}
+                            title="WhatsApp"
+                            className="btn-ghost btn-sm px-2 text-[#25D366]"
+                          >
+                            <MessageCircle className="size-4.5" />
+                          </a>
+                        )}
+                        {canWrite && <DeleteClientButton id={c.id} name={c.name} compact />}
+                      </div>
                     </td>
                   </tr>
                 );

@@ -44,6 +44,9 @@ export interface TotalsInput {
   freightAmount: number;
   freightTaxable: boolean;
   freightTaxRate: number;
+  packagingAmount?: number;
+  packagingTaxable?: boolean;
+  packagingTaxRate?: number;
   roundOff: boolean;
 }
 
@@ -69,6 +72,7 @@ export interface Totals {
   lines: LineResult[];
   subtotal: number;
   freight: number;
+  packaging: number;
   taxableValue: number;
   cgst: number;
   sgst: number;
@@ -144,20 +148,26 @@ export function calculateTotals(input: TotalsInput): Totals {
     };
   });
 
-  const freight = Math.max(toPaise(input.freightAmount), 0);
   let taxableValue = subtotal;
-  if (freight && input.freightTaxable) {
-    const rate = Number(input.freightTaxRate) || 0;
-    const t = splitTax(Math.round((freight * rate) / 100), inter);
-    cgst += t.cgst;
-    sgst += t.sgst;
-    igst += t.igst;
-    taxableValue += freight;
-    addBucket(rate, freight, t);
-  }
+  // Courier/freight and packaging are extra charges, optionally taxed at a single rate.
+  const addCharge = (amount: number | undefined, taxable: boolean | undefined, taxRate: number | undefined) => {
+    const charge = Math.max(toPaise(amount ?? 0), 0);
+    if (charge && taxable) {
+      const rate = Number(taxRate) || 0;
+      const t = splitTax(Math.round((charge * rate) / 100), inter);
+      cgst += t.cgst;
+      sgst += t.sgst;
+      igst += t.igst;
+      taxableValue += charge;
+      addBucket(rate, charge, t);
+    }
+    return charge;
+  };
+  const freight = addCharge(input.freightAmount, input.freightTaxable, input.freightTaxRate);
+  const packaging = addCharge(input.packagingAmount, input.packagingTaxable, input.packagingTaxRate);
 
   const totalTax = cgst + sgst + igst;
-  const exact = subtotal + freight + totalTax;
+  const exact = subtotal + freight + packaging + totalTax;
   const rounded = input.roundOff ? Math.round(exact / 100) * 100 : exact;
 
   return {
@@ -165,6 +175,7 @@ export function calculateTotals(input: TotalsInput): Totals {
     lines,
     subtotal: fromPaise(subtotal),
     freight: fromPaise(freight),
+    packaging: fromPaise(packaging),
     taxableValue: fromPaise(taxableValue),
     cgst: fromPaise(cgst),
     sgst: fromPaise(sgst),

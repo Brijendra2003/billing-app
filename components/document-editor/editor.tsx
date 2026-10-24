@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, FileCheck2, Plus, Printer, Save, Trash2, Truck } from "lucide-react";
+import { Copy, FileCheck2, Package, Plus, Printer, Save, Trash2, Truck } from "lucide-react";
 import { Spinner } from "@/components/ui";
 import { Combobox } from "@/components/combobox";
 import { saveDocument } from "@/app/actions/documents";
@@ -185,6 +185,9 @@ export function DocumentEditor({
         freightAmount: s.freight_enabled ? n(s.freight_amount) : 0,
         freightTaxable: s.freight_taxable,
         freightTaxRate: business.default_tax_rate,
+        packagingAmount: s.packaging_enabled ? n(s.packaging_amount) : 0,
+        packagingTaxable: s.packaging_taxable,
+        packagingTaxRate: business.default_tax_rate,
         roundOff: s.apply_round_off,
       }),
     [s, pos, business],
@@ -268,6 +271,8 @@ export function DocumentEditor({
           tax_mode: s.tax_mode,
           freight_amount: s.freight_enabled ? n(s.freight_amount) : 0,
           freight_taxable: s.freight_taxable,
+          packaging_amount: s.packaging_enabled ? n(s.packaging_amount) : 0,
+          packaging_taxable: s.packaging_taxable,
           apply_round_off: s.apply_round_off,
           notes: s.notes,
           terms: s.terms,
@@ -546,6 +551,26 @@ export function DocumentEditor({
             </>
           )}
         </div>
+
+        {/* Packaging */}
+        <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" className="size-4 accent-brand-600" checked={s.packaging_enabled} onChange={(e) => update({ packaging_enabled: e.target.checked })} />
+            <Package className="size-4 text-slate-400" /> Add packaging charges?
+          </label>
+          {s.packaging_enabled && (
+            <>
+              <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                Amount (₹):
+                <input className="input w-32" inputMode="decimal" placeholder="e.g. 100" value={s.packaging_amount} onChange={(e) => update({ packaging_amount: e.target.value })} />
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+                <input type="checkbox" className="size-4 accent-brand-600" checked={s.packaging_taxable} onChange={(e) => update({ packaging_taxable: e.target.checked })} />
+                Charge GST on packaging ({business.default_tax_rate}%)
+              </label>
+            </>
+          )}
+        </div>
       </section>
 
       {/* Notes + totals */}
@@ -564,6 +589,7 @@ export function DocumentEditor({
           <dl className="space-y-1.5 text-sm">
             <Row label="Sub total" value={money(totals.subtotal)} />
             {s.freight_enabled && totals.freight > 0 && s.freight_taxable && <Row label="Courier / freight" value={money(totals.freight)} />}
+            {s.packaging_enabled && totals.packaging > 0 && s.packaging_taxable && <Row label="Packaging" value={money(totals.packaging)} />}
             {totals.interState ? (
               <Row label="IGST" value={money(totals.igst)} />
             ) : (
@@ -573,6 +599,7 @@ export function DocumentEditor({
               </>
             )}
             {s.freight_enabled && totals.freight > 0 && !s.freight_taxable && <Row label="Courier / freight" value={money(totals.freight)} />}
+            {s.packaging_enabled && totals.packaging > 0 && !s.packaging_taxable && <Row label="Packaging" value={money(totals.packaging)} />}
             <div className="flex items-center justify-between text-slate-500">
               <label className="flex cursor-pointer items-center gap-2">
                 <input type="checkbox" className="size-3.5 accent-brand-600" checked={s.apply_round_off} onChange={(e) => update({ apply_round_off: e.target.checked })} />

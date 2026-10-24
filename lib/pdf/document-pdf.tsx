@@ -25,7 +25,8 @@ const s = StyleSheet.create({
   page: { fontFamily: "Noto", fontSize: 8.5, padding: 28, color: "#0f172a", lineHeight: 1.35 },
   row: { flexDirection: "row" },
   header: { flexDirection: "row", justifyContent: "space-between", borderBottomWidth: 2, borderBottomColor: BRAND, paddingBottom: 10 },
-  logo: { width: 64, height: 64, objectFit: "contain", marginRight: 10 },
+  // Same height as the company name + address + GSTIN + contact lines beside it
+  logo: { width: 100, height: 66, objectFit: "contain", marginRight: 10 },
   // Serif bold to match the "S.N. SAFETY" lettering in the logo (Times is a built-in PDF font)
   company: { fontFamily: "Times-Bold", fontSize: 18, color: BRAND, letterSpacing: 0.5, lineHeight: 1.2, marginBottom: 2 },
   muted: { color: MUTED },
@@ -121,6 +122,9 @@ export function DocumentPdf({
     freightAmount: doc.freight_amount,
     freightTaxable: doc.freight_taxable,
     freightTaxRate: doc.freight_tax_rate,
+    packagingAmount: doc.packaging_amount ?? 0,
+    packagingTaxable: doc.packaging_taxable,
+    packagingTaxRate: doc.packaging_tax_rate,
     roundOff: doc.apply_round_off,
   });
   const inter = totals.interState;
@@ -276,6 +280,12 @@ export function DocumentPdf({
                   <Text>{money(totals.freight)}</Text>
                 </View>
               ) : null}
+              {totals.packaging > 0 && doc.packaging_taxable ? (
+                <View style={s.totalsRow}>
+                  <Text style={s.muted}>Packaging</Text>
+                  <Text>{money(totals.packaging)}</Text>
+                </View>
+              ) : null}
               {inter ? (
                 <View style={s.totalsRow}>
                   <Text style={s.muted}>IGST</Text>
@@ -297,6 +307,12 @@ export function DocumentPdf({
                 <View style={s.totalsRow}>
                   <Text style={s.muted}>Courier / freight</Text>
                   <Text>{money(totals.freight)}</Text>
+                </View>
+              ) : null}
+              {totals.packaging > 0 && !doc.packaging_taxable ? (
+                <View style={s.totalsRow}>
+                  <Text style={s.muted}>Packaging</Text>
+                  <Text>{money(totals.packaging)}</Text>
                 </View>
               ) : null}
               {totals.roundOff !== 0 ? (

@@ -63,6 +63,9 @@ export interface EditorState {
   freight_enabled: boolean;
   freight_amount: string;
   freight_taxable: boolean;
+  packaging_enabled: boolean;
+  packaging_amount: string;
+  packaging_taxable: boolean;
   apply_round_off: boolean;
   notes: string;
   terms: string;

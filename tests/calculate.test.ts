@@ -44,6 +44,18 @@ describe("calculateTotals", () => {
     expect(t.taxableValue).toBe(1000);
   });
 
+  it("adds packaging, taxed or untaxed", () => {
+    const item = [{ qty: 1, rate: 1000, tax_rate: 18 }];
+    const taxed = calculateTotals({ ...base, packagingAmount: 100, packagingTaxable: true, packagingTaxRate: 18, items: item });
+    expect(taxed.packaging).toBe(100);
+    expect(taxed.taxableValue).toBe(1100);
+    expect(taxed.totalTax).toBe(198);
+    expect(taxed.grandTotal).toBe(1298);
+    const untaxed = calculateTotals({ ...base, packagingAmount: 100, packagingTaxable: false, items: item });
+    expect(untaxed.taxableValue).toBe(1000);
+    expect(untaxed.grandTotal).toBe(1280);
+  });
+
   it("taxes freight when configured", () => {
     const t = calculateTotals({ ...base, freightAmount: 100, freightTaxable: true, items: [{ qty: 1, rate: 1000, tax_rate: 18 }] });
     expect(t.totalTax).toBe(198);

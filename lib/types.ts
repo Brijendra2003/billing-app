@@ -130,6 +130,9 @@ export interface DocumentRow {
   freight_amount: number;
   freight_taxable: boolean;
   freight_tax_rate: number;
+  packaging_amount: number;
+  packaging_taxable: boolean;
+  packaging_tax_rate: number;
   apply_round_off: boolean;
   subtotal: number;
   taxable_value: number;

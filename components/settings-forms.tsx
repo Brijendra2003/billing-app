@@ -148,13 +148,14 @@ export function NumberingForm({ business, next }: { business: Business; next: Re
     format.replace("{PREFIX}", prefix).replace("{FY}", "26-27").replace("{SEQ}", String(seq).padStart(padding, "0"));
   const types = [
     ["quotation", "Quotation", business.prefix_quotation],
-    ["proforma", "Proforma", business.prefix_proforma],
     ["tax_invoice", "Tax invoice", business.prefix_tax_invoice],
     ["credit_note", "Credit note", business.prefix_credit_note],
   ] as const;
 
   return (
     <form action={action} className="space-y-4">
+      {/* Proforma is no longer offered, but saveNumbering still requires its prefix */}
+      <input type="hidden" name="prefix_proforma" value={business.prefix_proforma} />
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="block">
           <span className="label">Format ({"{PREFIX}"} {"{FY}"} {"{SEQ}"})</span>

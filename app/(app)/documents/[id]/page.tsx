@@ -156,6 +156,7 @@ export default async function DocumentPage({ params, searchParams }: PageProps<"
                 </>
               )}
               {doc.freight_amount > 0 && <Line label="Courier / freight" value={money(doc.freight_amount)} />}
+              {doc.packaging_amount > 0 && <Line label="Packaging" value={money(doc.packaging_amount)} />}
               {doc.round_off !== 0 && <Line label="Round off" value={money(doc.round_off)} />}
               <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-bold">
                 <dt>Grand total</dt>
