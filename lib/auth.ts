@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { io } from "next/cache";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import type { Business, MemberRole } from "@/lib/types";
 
@@ -19,8 +19,9 @@ export interface AppContext {
  */
 export const getContext = cache(async (): Promise<AppContext> => {
   const supabase = await createClient();
-  // getClaims() reads the clock to check token expiry; keep that out of prerendering.
-  await io();
+  // getClaims() reads the clock to check token expiry, so it must only run for a real request,
+  // never while prerendering or runtime-prefetching (io() still lets prefetches through).
+  await connection();
   const { data, error } = await supabase.auth.getClaims();
   const claims = data?.claims;
   if (error || !claims?.sub) redirect("/login");

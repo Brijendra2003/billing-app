@@ -54,7 +54,8 @@ function ImageField({ name, label, url }: { name: string; label: string; url: st
 
 export function ProfileForm({ business, images }: { business: Business; images: { logo: string | null; signature: string | null; payment_qr: string | null } }) {
   const [state, action, pending] = useActionState(saveProfile, undefined);
-  const phone = business.phone.startsWith("91") && business.phone.length === 12 ? business.phone.slice(2) : business.phone;
+  const localPhone = (p: string) => (p.startsWith("91") && p.length === 12 ? p.slice(2) : p);
+  const phone = localPhone(business.phone);
   return (
     <form action={action} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -91,6 +92,12 @@ export function ProfileForm({ business, images }: { business: Business; images: 
         <Input name="bank_name" label="Bank" defaultValue={business.bank_name} />
         <Input name="bank_branch" label="Branch" defaultValue={business.bank_branch} />
         <Input name="upi_id" label="UPI ID (adds a pay-by-UPI QR with the amount)" defaultValue={business.upi_id} placeholder="name@bank" />
+      </div>
+
+      <h3 className="pt-2 text-sm font-bold text-slate-700">Accountant (CA)</h3>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Input name="ca_name" label="CA name" defaultValue={business.ca_name ?? ""} />
+        <Input name="ca_whatsapp" label="CA WhatsApp number (for “Share to CA” on Invoices)" defaultValue={localPhone(business.ca_whatsapp ?? "")} type="tel" />
       </div>
 
       <h3 className="pt-2 text-sm font-bold text-slate-700">Branding (PNG or JPG, up to 2 MB)</h3>

@@ -28,6 +28,8 @@ const profileSchema = z.object({
   bank_ifsc: text(20).transform((v) => v.toUpperCase()),
   bank_name: text(100),
   bank_branch: text(100),
+  ca_name: text(100),
+  ca_whatsapp: text(20),
 });
 
 export async function saveProfile(_: FormState, formData: FormData): Promise<FormState> {
@@ -39,6 +41,7 @@ export async function saveProfile(_: FormState, formData: FormData): Promise<For
   const update: Record<string, unknown> = {
     ...d,
     phone: normalizePhone(d.phone),
+    ca_whatsapp: normalizePhone(d.ca_whatsapp),
     state: stateName(d.state_code),
   };
 

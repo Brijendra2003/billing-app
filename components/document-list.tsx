@@ -3,11 +3,13 @@ import Form from "next/form";
 import { FileDown, Pencil } from "lucide-react";
 import type { AppContext } from "@/lib/auth";
 import { displayStatus, isEditable, normalizeDoc } from "@/lib/data/documents";
-import { date, money, todayIST } from "@/lib/format";
+import { date, money, monthLabel, todayIST } from "@/lib/format";
+import { env } from "@/lib/env";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { SubmitButton } from "@/components/submit-button";
 import { DeleteDocumentButton } from "@/components/small-actions";
-import { DOC_LABEL, type DocType } from "@/lib/types";
+import { SelectBox, type SelectableDoc } from "@/components/doc-selection";
+import { DOC_LABEL, type DocType, type DocumentRow } from "@/lib/types";
 
 export interface ListFilters {
   status?: string;
@@ -25,6 +27,7 @@ export async function DocumentList({
   basePath,
   tabs,
   emptyAction,
+  selectable = false,
 }: {
   ctx: AppContext;
   types: DocType[];
@@ -32,6 +35,8 @@ export async function DocumentList({
   basePath: string;
   tabs: { key: string; label: string }[];
   emptyAction: React.ReactNode;
+  /** Adds checkboxes for "Share to CA"; must be rendered inside <SelectionProvider>. */
+  selectable?: boolean;
 }) {
   const today = todayIST();
   const page = Math.max(1, Number(filters.page) || 1);
@@ -39,7 +44,7 @@ export async function DocumentList({
 
   let query = ctx.supabase
     .from("documents")
-    .select("id, doc_type, status, number, issue_date, due_date, valid_until, bill_to, grand_total, balance_due, amount_paid", {
+    .select("id, doc_type, status, number, issue_date, due_date, valid_until, bill_to, grand_total, balance_due, amount_paid, share_token", {
       count: "exact",
     })
     .in("doc_type", docTypes)
@@ -88,6 +93,27 @@ export async function DocumentList({
   const docs = (data ?? []).map(normalizeDoc);
   const canWrite = ctx.role !== "viewer";
 
+  // Already sorted newest first, so each month's documents are consecutive.
+  const months: { ym: string; docs: DocumentRow[] }[] = [];
+  for (const d of docs) {
+    const ym = d.issue_date.slice(0, 7);
+    if (months.at(-1)?.ym !== ym) months.push({ ym, docs: [] });
+    months.at(-1)!.docs.push(d);
+  }
+  // Drafts have no number and no public PDF, so they can't be shared.
+  const shareable = (d: DocumentRow): SelectableDoc[] =>
+    d.status === "draft"
+      ? []
+      : [
+          {
+            id: d.id,
+            line: `${DOC_LABEL[d.doc_type]} ${d.number} | ${date(d.issue_date)} | ${d.bill_to?.name ?? ""} | ${money(d.grand_total)}${
+              d.status === "cancelled" ? " (CANCELLED)" : ""
+            }\nPDF: ${env.appUrl()}/api/share/${d.share_token}/pdf`,
+          },
+        ];
+  const columns = selectable ? 9 : 8;
+
   const href = (patch: Partial<ListFilters>) => {
     const p = new URLSearchParams();
     const merged = { ...filters, ...patch };
@@ -130,6 +156,11 @@ export async function DocumentList({
           <table className="table-base">
             <thead>
               <tr>
+                {selectable && (
+                  <th className="w-8">
+                    <SelectBox docs={docs.flatMap(shareable)} label="Select all on this page" />
+                  </th>
+                )}
                 <th>Number</th>
                 <th>Client</th>
                 <th className="hidden sm:table-cell">Date</th>
@@ -142,9 +173,28 @@ export async function DocumentList({
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {docs.map((d) => (
+            {months.map(({ ym, docs: monthDocs }) => (
+            <tbody key={ym}>
+              <tr className="bg-slate-50">
+                {selectable && (
+                  <td className="py-2">
+                    <SelectBox docs={monthDocs.flatMap(shareable)} label={`Select all of ${monthLabel(ym)}`} />
+                  </td>
+                )}
+                <td colSpan={selectable ? columns - 1 : columns} className="py-2 text-xs font-bold uppercase tracking-wide text-slate-600">
+                  {monthLabel(ym)}
+                  <span className="ml-2 font-medium normal-case tracking-normal text-slate-400">
+                    {monthDocs.length} document{monthDocs.length === 1 ? "" : "s"}
+                  </span>
+                </td>
+              </tr>
+              {monthDocs.map((d) => (
                 <tr key={d.id} className="cursor-pointer">
+                  {selectable && (
+                    <td>
+                      <SelectBox docs={shareable(d)} label={`Select ${d.number ?? "draft"}`} />
+                    </td>
+                  )}
                   <td className="whitespace-nowrap">
                     <Link href={`/documents/${d.id}`} className="font-semibold text-brand-700 hover:underline">
                       {d.number ?? "Draft"}
@@ -186,6 +236,7 @@ export async function DocumentList({
                 </tr>
               ))}
             </tbody>
+            ))}
           </table>
         </div>
       )}

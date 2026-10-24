@@ -32,6 +32,8 @@ export interface Business {
   signature_path: string | null;
   payment_qr_path: string | null;
   upi_id: string;
+  ca_name: string;
+  ca_whatsapp: string;
   bank_account_name: string;
   bank_account_no: string;
   bank_ifsc: string;

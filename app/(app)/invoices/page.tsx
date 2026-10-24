@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { getContext } from "@/lib/auth";
 import { DocumentList, type ListFilters } from "@/components/document-list";
 import { PageHeader } from "@/components/ui";
+import { SelectionProvider, ShareToCaButton } from "@/components/doc-selection";
 
 export const metadata: Metadata = { title: "Invoices" };
 
@@ -22,11 +23,16 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
     </Link>
   );
   return (
-    <>
+    <SelectionProvider>
       <PageHeader
         title="Invoices"
         subtitle="Tax invoices and credit notes."
-        actions={newButton}
+        actions={
+          <>
+            <ShareToCaButton caName={ctx.business.ca_name ?? ""} caPhone={ctx.business.ca_whatsapp ?? ""} businessName={ctx.business.name} />
+            {newButton}
+          </>
+        }
       />
       <div className="mb-3 flex flex-wrap gap-3 text-sm">
         {TYPES.map((t) => {
@@ -59,7 +65,8 @@ export default async function InvoicesPage({ searchParams }: PageProps<"/invoice
           { key: "paid", label: "Paid" },
           { key: "cancelled", label: "Cancelled" },
         ]}
+        selectable
       />
-    </>
+    </SelectionProvider>
   );
 }
